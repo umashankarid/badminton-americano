@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: badminton-americano
+    runtime: docker
+    repo: https://github.com/umashankarid/badminton-americano
+    branch: main
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: FLASK_DEBUG
+        value: "0"
