@@ -59,6 +59,8 @@
         <h2>Edit Tournament</h2>
         <label style="font-weight:500;display:block;margin-bottom:4px">Tournament Name</label>
         <input type="text" id="etName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Tournament Date</label>
+        <input type="date" id="etDate" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
         <label style="font-weight:500;display:block;margin-bottom:4px">Level</label>
         <select id="etLevel" onchange="loadEditPlayers()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
             <option value="No-level">No-level (Mixed)</option>
@@ -112,8 +114,18 @@
             </div>
             <div class="card" id="joinCard" style="display:none">
                 <h2>Join Tournament</h2>
-                <select id="joinPlayer" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px"></select>
-                <button onclick="joinTournament()" style="background:#34a853">Join</button>
+                <input type="text" id="joinSearch" placeholder="Search player name..." oninput="filterJoinPlayers()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">
+                <div id="joinPlayerList" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
+                <div id="addNewPlayer" style="display:none;border-top:1px solid #eee;padding-top:10px;margin-top:8px">
+                    <p style="font-size:0.9em;color:#666;margin-bottom:8px">Player not found? Add new:</p>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="newPlayerName" placeholder="Name" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:6px">
+                        <select id="newPlayerLevel" style="padding:8px;border:1px solid #ddd;border-radius:6px">
+                            <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                        </select>
+                        <button onclick="addAndJoin()" style="padding:8px 16px">Add & Join</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -138,12 +150,13 @@ async function loadTournament() {
 
     document.getElementById('tName').textContent = t.name;
     document.title = t.name;
-    document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}`;
+    document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}${t.date ? ' · ' + t.date : ''}`;
 
     // Show edit button if not started
     if (t.current_round === 0 && t.status !== 'finished') {
         document.getElementById('editSection').style.display = 'block';
         document.getElementById('etName').value = t.name;
+        document.getElementById('etDate').value = t.date || '';
         document.getElementById('etLevel').value = t.level;
         document.getElementById('etMaxPoints').value = t.max_points;
         document.getElementById('etCourts').value = t.courts;
@@ -300,22 +313,57 @@ async function nextRound() {
     loadTournament();
 }
 
+let allPlayers = [];
+let tournamentPlayerIds = [];
+
 async function loadJoinPlayers(existingIds) {
+    tournamentPlayerIds = existingIds;
     const res = await fetch('/api/players');
-    const players = await res.json();
-    const available = players.filter(p => !existingIds.includes(p.id));
-    document.getElementById('joinPlayer').innerHTML = available.map(p =>
-        `<option value="${p.id}">${p.name}</option>`
-    ).join('') || '<option disabled>No more players available</option>';
+    allPlayers = await res.json();
+    document.getElementById('joinSearch').value = '';
+    renderJoinPlayers('');
 }
 
-async function joinTournament() {
-    const pid = parseInt(document.getElementById('joinPlayer').value);
-    if (!pid) return;
+function filterJoinPlayers() {
+    const q = document.getElementById('joinSearch').value;
+    renderJoinPlayers(q);
+}
+
+function renderJoinPlayers(query) {
+    const q = query.toLowerCase();
+    const available = allPlayers.filter(p => !tournamentPlayerIds.includes(p.id));
+    const filtered = q ? available.filter(p => p.name.toLowerCase().includes(q)) : available;
+    document.getElementById('joinPlayerList').innerHTML = filtered.map(p =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid #eee">
+            <span>${p.name}</span>
+            <button onclick="joinTournament(${p.id})" style="padding:4px 12px;font-size:0.85em;background:#34a853">Join</button>
+        </div>`
+    ).join('') || '<p style="color:#888;padding:6px">No matching players</p>';
+    // Show add-new if search has text and no exact match
+    const exactMatch = q && allPlayers.some(p => p.name.toLowerCase() === q);
+    document.getElementById('addNewPlayer').style.display = (q && !exactMatch) ? 'block' : 'none';
+    document.getElementById('newPlayerName').value = query;
+}
+
+async function joinTournament(pid) {
     const res = await fetch(`/api/tournaments/${TID}/join`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: pid}) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
     loadTournament();
+}
+
+async function addAndJoin() {
+    const name = document.getElementById('newPlayerName').value.trim();
+    const level = document.getElementById('newPlayerLevel').value;
+    if (!name) { alert('Enter a name'); return; }
+    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    // Reload players and join the new one
+    const pRes = await fetch('/api/players');
+    allPlayers = await pRes.json();
+    const newPlayer = allPlayers.find(p => p.name === name);
+    if (newPlayer) await joinTournament(newPlayer.id);
 }
 
 async function leaveTournament(pid) {
@@ -352,6 +400,7 @@ async function saveTournamentEdit() {
         level: document.getElementById('etLevel').value,
         max_points: parseInt(document.getElementById('etMaxPoints').value),
         courts: parseInt(document.getElementById('etCourts').value),
+        date: document.getElementById('etDate').value,
         player_ids
     };
     const res = await fetch(`/api/tournaments/${TID}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });

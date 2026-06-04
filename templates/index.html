@@ -51,10 +51,10 @@
             <span id="adminStatus" style="font-size:0.85em;color:#888"></span>
             <button id="adminBtn" onclick="showModal('loginModal')" style="padding:6px 12px;font-size:0.85em;background:#555">🔒 Admin Login</button>
         </div>
-        <div class="grid">
+        <div class="grid admin-only" style="display:none">
             <button class="nav-btn" onclick="showModal('playerModal')">➕ Add Player</button>
             <button class="nav-btn orange" onclick="showEditPlayerModal()">✎ Edit Player</button>
-            <button class="nav-btn green admin-only" onclick="editingTournamentId=null;showModal('tournamentModal')" style="display:none">🏆 Create Tournament</button>
+            <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
         </div>
         <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
@@ -111,6 +111,8 @@
         <span class="close" onclick="hideModal('tournamentModal')">&times;</span>
         <h2 id="tournamentModalTitle">Create Tournament</h2>
         <input type="text" id="tName" placeholder="Tournament name">
+        <label for="tDate" style="font-weight:500;display:block;margin-bottom:4px">Tournament Date</label>
+        <input type="date" id="tDate">
         <label for="tLevel" style="font-weight:500;display:block;margin-bottom:4px">Tournament Level</label>
         <select id="tLevel" onchange="loadTournamentPlayers()">
             <option value="No-level">No-level (Mixed)</option>
@@ -248,6 +250,7 @@ async function createTournament() {
         level: document.getElementById('tLevel').value,
         max_points: parseInt(document.getElementById('tMaxPoints').value),
         courts: parseInt(document.getElementById('tCourts').value),
+        date: document.getElementById('tDate').value,
         player_ids
     };
     let res;
@@ -272,8 +275,9 @@ async function loadTournaments() {
         const slug = t.name.toLowerCase().replace(/ /g, '-');
         const adminBtns = isAdmin ? `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
          <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>` : '';
+        const dateStr = t.date ? ` · ${t.date}` : '';
         return `<div class="tournament-item"><a href="/tournament/${slug}">${t.name}</a>
-         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}</span>${adminBtns}</span></div>`;
+         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
     }).join('') || '<p style="color:#888">No tournaments yet</p>';
 }
 
@@ -284,6 +288,7 @@ async function editTournament(id) {
     const res = await fetch(`/api/tournaments/${id}`);
     const t = await res.json();
     document.getElementById('tName').value = t.name;
+    document.getElementById('tDate').value = t.date || '';
     document.getElementById('tLevel').value = t.level;
     document.getElementById('tMaxPoints').value = t.max_points;
     document.getElementById('tCourts').value = t.courts;

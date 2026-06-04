@@ -28,6 +28,7 @@ def init_db():
             level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C', 'No-level')),
             max_points INTEGER NOT NULL DEFAULT 15,
             courts INTEGER NOT NULL DEFAULT 1,
+            date TEXT,
             status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'finished')),
             current_round INTEGER NOT NULL DEFAULT 0
         );

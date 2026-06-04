@@ -189,8 +189,8 @@ def create_tournament():
         db.close()
         return jsonify({"error": "Tournament with this name already exists"}), 400
     cur = db.execute(
-        "INSERT INTO tournament (name, level, max_points, courts) VALUES (?, ?, ?, ?)",
-        (data["name"], data["level"], data["max_points"], data["courts"])
+        "INSERT INTO tournament (name, level, max_points, courts, date) VALUES (?, ?, ?, ?, ?)",
+        (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"))
     )
     tid = cur.lastrowid
     for pid in data.get("player_ids", []):
@@ -213,8 +213,8 @@ def edit_tournament(tid):
     if existing:
         db.close()
         return jsonify({"error": "Tournament with this name already exists"}), 400
-    db.execute("UPDATE tournament SET name=?, level=?, max_points=?, courts=? WHERE id=?",
-               (data["name"], data["level"], data["max_points"], data["courts"], tid))
+    db.execute("UPDATE tournament SET name=?, level=?, max_points=?, courts=?, date=? WHERE id=?",
+               (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"), tid))
     db.execute("DELETE FROM tournament_player WHERE tournament_id = ?", (tid,))
     for pid in data["player_ids"]:
         db.execute("INSERT INTO tournament_player (tournament_id, player_id) VALUES (?, ?)", (tid, pid))
