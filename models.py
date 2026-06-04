@@ -26,6 +26,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             description TEXT,
+            start_date TEXT,
+            end_date TEXT,
             status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'finished'))
         );
 

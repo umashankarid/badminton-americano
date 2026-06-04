@@ -185,6 +185,10 @@
         <h2>Create Season</h2>
         <input type="text" id="sName" placeholder="Season name (e.g. Summer Tournaments 2026)">
         <input type="text" id="sDesc" placeholder="Description (optional)">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Start Date</label>
+        <input type="date" id="sStartDate" onclick="this.showPicker()">
+        <label style="font-weight:500;display:block;margin-bottom:4px">End Date</label>
+        <input type="date" id="sEndDate" onclick="this.showPicker()">
         <button onclick="createSeason()">Create Season</button>
     </div>
 </div>
@@ -343,21 +347,24 @@ async function loadSeasons() {
     }
     document.getElementById('seasonList').innerHTML = seasons.map(s => {
         const adminBtns = isAdmin ? `<button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteSeason(${s.id})">✕</button>` : '';
+        const dates = s.start_date && s.end_date ? `<div style="font-size:0.8em;color:#666">${s.start_date} → ${s.end_date}</div>` : '';
         return `<div class="tournament-item" style="background:#f3e5f5;border-color:#ce93d8">
-            <a href="/season/${s.id}" style="font-weight:600;color:#7b1fa2">${s.name}</a>
+            <div><a href="/season/${s.id}" style="font-weight:600;color:#7b1fa2">${s.name}</a>${dates}</div>
             <span><span class="status-${s.status}">${s.status}</span>${adminBtns}</span>
         </div>`;
     }).join('');
 }
 
 async function createSeason() {
-    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value };
+    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value, start_date: document.getElementById('sStartDate').value, end_date: document.getElementById('sEndDate').value };
     if (!data.name) { alert('Enter season name'); return; }
     const res = await fetch('/api/seasons', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
     document.getElementById('sName').value = '';
     document.getElementById('sDesc').value = '';
+    document.getElementById('sStartDate').value = '';
+    document.getElementById('sEndDate').value = '';
     hideModal('seasonModal');
     loadSeasons();
 }

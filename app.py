@@ -181,7 +181,8 @@ def create_season():
     if existing:
         db.close()
         return jsonify({"error": "Season with this name already exists"}), 400
-    cur = db.execute("INSERT INTO season (name, description) VALUES (?, ?)", (data["name"], data.get("description", "")))
+    cur = db.execute("INSERT INTO season (name, description, start_date, end_date) VALUES (?, ?, ?, ?)",
+                     (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date")))
     db.commit()
     db.close()
     return jsonify({"id": cur.lastrowid}), 201

@@ -86,6 +86,8 @@ async function loadSeason() {
     document.getElementById('sName').textContent = seasonData.name;
     document.title = seasonData.name;
     document.getElementById('sDesc').textContent = seasonData.description || '';
+    const dateRange = seasonData.start_date && seasonData.end_date ? `${seasonData.start_date} → ${seasonData.end_date}` : '';
+    if (dateRange) document.getElementById('sDesc').textContent += (seasonData.description ? ' · ' : '') + dateRange;
     document.getElementById('playerCount').textContent = seasonData.players.length;
 
     // Registered players
