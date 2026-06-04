@@ -231,8 +231,8 @@ def create_season():
     if existing:
         db.close()
         return jsonify({"error": "Season with this name already exists"}), 400
-    cur = db.execute("INSERT INTO season (name, description, start_date, end_date, registration_deadline) VALUES (?, ?, ?, ?, ?)",
-                     (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline")))
+    cur = db.execute("INSERT INTO season (name, description, info, start_date, end_date, registration_deadline) VALUES (?, ?, ?, ?, ?, ?)",
+                     (data["name"], data.get("description", ""), data.get("info", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline")))
     db.commit()
     db.close()
     return jsonify({"id": cur.lastrowid}), 201
@@ -268,8 +268,8 @@ def edit_season(sid):
     if existing:
         db.close()
         return jsonify({"error": "Season with this name already exists"}), 400
-    db.execute("UPDATE season SET name=?, description=?, start_date=?, end_date=?, registration_deadline=? WHERE id=?",
-               (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline"), sid))
+    db.execute("UPDATE season SET name=?, description=?, info=?, start_date=?, end_date=?, registration_deadline=? WHERE id=?",
+               (data["name"], data.get("description", ""), data.get("info", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline"), sid))
     db.commit()
     db.close()
     return jsonify({"ok": True})

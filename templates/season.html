@@ -30,6 +30,10 @@
     <h1 id="sName"></h1>
     <p class="subtitle" id="sDesc"></p>
     <p id="sDeadline" style="margin-bottom:16px;font-size:0.9em"></p>
+    <div id="sInfoDisplay" class="card" style="display:none">
+        <h2 onclick="document.getElementById('sInfoText').style.display = document.getElementById('sInfoText').style.display === 'none' ? 'block' : 'none'" style="cursor:pointer">ℹ️ Info <span style="font-size:0.7em;color:#888">▼</span></h2>
+        <div id="sInfoText" style="display:none;margin-top:12px;line-height:1.7;font-size:0.92em;color:#444"></div>
+    </div>
 
     <div class="card admin-only" id="editSeasonCard" style="display:none">
         <h2>Edit Season</h2>
@@ -37,6 +41,8 @@
         <input type="text" id="esName">
         <label style="font-weight:500;display:block;margin-bottom:4px">Description</label>
         <input type="text" id="esDesc">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Detailed Info (visible to players)</label>
+        <textarea id="esInfo" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:150px;font-family:inherit;margin-bottom:10px"></textarea>
         <label style="font-weight:500;display:block;margin-bottom:4px">Start Date</label>
         <input type="date" id="esStartDate" onclick="this.showPicker()">
         <label style="font-weight:500;display:block;margin-bottom:4px">End Date</label>
@@ -120,6 +126,7 @@ async function saveSeason() {
     const data = {
         name: document.getElementById('esName').value,
         description: document.getElementById('esDesc').value,
+        info: document.getElementById('esInfo').value,
         start_date: document.getElementById('esStartDate').value,
         end_date: document.getElementById('esEndDate').value,
         registration_deadline: document.getElementById('esDeadline').value
@@ -149,9 +156,14 @@ async function loadSeason() {
     if (seasonData.registration_deadline) {
         document.getElementById('sDeadline').innerHTML = `<strong>Registration deadline:</strong> ${seasonData.registration_deadline}`;
     }
+    if (seasonData.info) {
+        document.getElementById('sInfoDisplay').style.display = '';
+        document.getElementById('sInfoText').innerHTML = seasonData.info.replace(/\n/g, '<br>');
+    }
     // Populate edit form
     document.getElementById('esName').value = seasonData.name;
     document.getElementById('esDesc').value = seasonData.description || '';
+    document.getElementById('esInfo').value = seasonData.info || '';
     document.getElementById('esStartDate').value = seasonData.start_date || '';
     document.getElementById('esEndDate').value = seasonData.end_date || '';
     document.getElementById('esDeadline').value = seasonData.registration_deadline || '';

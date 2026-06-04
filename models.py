@@ -39,6 +39,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             description TEXT,
+            info TEXT,
             start_date TEXT,
             end_date TEXT,
             registration_deadline TEXT,
@@ -148,6 +149,10 @@ def init_db():
         pass
     try:
         conn.execute("ALTER TABLE season ADD COLUMN registration_deadline TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE season ADD COLUMN info TEXT")
     except:
         pass
     conn.commit()

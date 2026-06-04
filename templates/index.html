@@ -76,45 +76,6 @@
         <div id="tournamentList"><p style="color:#888">Loading...</p></div>
     </div>
 
-    <div class="card">
-        <h2 onclick="document.getElementById('infoContent').style.display = document.getElementById('infoContent').style.display === 'none' ? 'block' : 'none'" style="cursor:pointer">ℹ️ About Komet Summer Americano 2026 <span style="font-size:0.7em;color:#888">▼</span></h2>
-        <div id="infoContent" style="display:none;margin-top:12px;line-height:1.7;font-size:0.92em;color:#444">
-            <p><strong>What is it?</strong><br>
-            Komet is proposing Americano double matches program during the summer. Americano program, as in the Komet julmästerskap and klubmästerskap, is basically getting a number of people together, and everyone plays with everyone and collect points. It will be based on 1x21 point per match. If there are 8 people, each person will play 7 sets of double with different partner.</p>
-
-            <p style="margin-top:12px"><strong>Why do we propose this?</strong></p>
-            <ul style="margin-left:20px">
-                <li>During summer, people want to train badminton and an organized program is beneficial for players, i.e. people do not need to look for partners to play with.</li>
-                <li>It can be expensive to buy own shuttles for matches, and not always easy to share shuttles when playing together.</li>
-            </ul>
-
-            <p style="margin-top:12px"><strong>When and how long?</strong><br>
-            Twice a week, Tuesday and Thursday 17:00–20:00, for 8 weeks, starting June 16th until August 6th (16 sessions total).</p>
-
-            <p style="margin-top:12px"><strong>How much will it cost?</strong></p>
-            <ul style="margin-left:20px">
-                <li>Sommarkort from Komethallen: 799 SEK (required)</li>
-                <li>Americano program: 700 SEK/person for full 8 weeks</li>
-                <li>Non-members: sommarkort 899 SEK + program 1100 SEK</li>
-            </ul>
-            <p style="margin-top:4px;font-size:0.9em;color:#666">With sommarkort you can also play any other time outside program hours with your own shuttles.</p>
-
-            <p style="margin-top:12px"><strong>What do you get?</strong><br>
-            For every 10 people, 2 courts are booked with 2 dozens of shuttles available. All shuttles (used and unused) belong to BMK Komet.</p>
-
-            <p style="margin-top:12px"><strong>What if I'm on vacation?</strong><br>
-            You can still join. If you're away for a few weeks but want to play the rest, that's fine. However, the fee remains 700 SEK (no reduced fee).</p>
-
-            <p style="margin-top:12px"><strong>What about different playing levels?</strong><br>
-            Everyone plays with everyone at least once — no one is left out. If there are many players, we divide into groups balanced by level. After each Americano day, top 2 of Group B replace bottom 2 of Group A (promotion/relegation).</p>
-
-            <p style="margin-top:12px"><strong>How to sign up?</strong><br>
-            Click on a tournament above, search your name and join. If your name is not listed, you can add yourself directly. Sign up deadline: <strong>June 11th</strong>. Please confirm one day before each Americano day that you will attend, so the playing program can be created and published beforehand.</p>
-
-            <p style="margin-top:12px"><strong>Questions?</strong><br>
-            Contact Andi (<a href="mailto:info@bmkkomet.se">info@bmkkomet.se</a>) or Sugiarto (<a href="mailto:sugiartotanudin@yahoo.com">sugiartotanudin@yahoo.com</a>).</p>
-        </div>
-    </div>
 </div>
 
 <!-- Admin Login Modal -->
@@ -190,7 +151,9 @@
         <span class="close" onclick="hideModal('seasonModal')">&times;</span>
         <h2>Create Season</h2>
         <input type="text" id="sName" placeholder="Season name (e.g. Summer Tournaments 2026)">
-        <input type="text" id="sDesc" placeholder="Description (optional)">
+        <input type="text" id="sDesc" placeholder="Short description (optional)">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Detailed Info (visible to players)</label>
+        <textarea id="sInfo" placeholder="Enter detailed information about the season..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:150px;font-family:inherit;margin-bottom:10px"></textarea>
         <label style="font-weight:500;display:block;margin-bottom:4px">Start Date</label>
         <input type="date" id="sStartDate" onclick="this.showPicker()">
         <label style="font-weight:500;display:block;margin-bottom:4px">End Date</label>
@@ -201,7 +164,16 @@
     </div>
 </div>
 
-<!-- Card Types Modal -->
+<!-- Season Info Modal -->
+<div id="seasonInfoModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('seasonInfoModal')">&times;</span>
+        <h2 id="seasonInfoTitle"></h2>
+        <div id="seasonInfoContent" style="line-height:1.7;color:#444"></div>
+    </div>
+</div>
+
+<!-- Card Types Modal (actual) -->
 <div id="cardTypeModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="hideModal('cardTypeModal')">&times;</span>
@@ -437,6 +409,7 @@ async function createTournament() {
 async function loadSeasons() {
     const res = await fetch('/api/seasons');
     let seasons = await res.json();
+    window._seasonsData = seasons;
     if (!isAdmin) {
         seasons = seasons.filter(s => s.status === 'active');
         document.getElementById('seasonListTitle').textContent = 'Seasons Open for Registration';
@@ -457,21 +430,23 @@ async function loadSeasons() {
         const style = closed ? 'background:#f5f5f5;border-color:#ccc;opacity:0.7' : 'background:#f3e5f5;border-color:#ce93d8';
         const tag = closed ? '<span style="font-size:0.75em;background:#eee;color:#888;padding:2px 6px;border-radius:4px;margin-left:6px">Registration closed</span>' : '<span style="font-size:0.75em;background:#e8f5e9;color:#2e7d32;padding:2px 6px;border-radius:4px;margin-left:6px">Open</span>';
         const deadlineInfo = s.registration_deadline ? `<div style="font-size:0.8em;color:#888">Deadline: ${s.registration_deadline}</div>` : '';
+        const infoBtn = s.info ? `<button onclick="showSeasonInfo(${s.id})" style="padding:2px 8px;font-size:0.8em;background:#1a73e8;color:white;border:none;border-radius:4px;cursor:pointer;margin-left:6px">ℹ️</button>` : '';
         return `<div class="tournament-item" style="${style}">
-            <div><a href="/season/${s.id}" style="font-weight:600;color:${closed ? '#888' : '#7b1fa2'}">${s.name}</a>${tag}${dates}${deadlineInfo}</div>
+            <div><a href="/season/${s.id}" style="font-weight:600;color:${closed ? '#888' : '#7b1fa2'}">${s.name}</a>${tag}${infoBtn}${dates}${deadlineInfo}</div>
             <span><span class="status-${s.status}">${s.status}</span>${adminBtns}</span>
         </div>`;
     }).join('');
 }
 
 async function createSeason() {
-    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value, start_date: document.getElementById('sStartDate').value, end_date: document.getElementById('sEndDate').value, registration_deadline: document.getElementById('sDeadline').value };
+    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value, info: document.getElementById('sInfo').value, start_date: document.getElementById('sStartDate').value, end_date: document.getElementById('sEndDate').value, registration_deadline: document.getElementById('sDeadline').value };
     if (!data.name) { alert('Enter season name'); return; }
     const res = await fetch('/api/seasons', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
     document.getElementById('sName').value = '';
     document.getElementById('sDesc').value = '';
+    document.getElementById('sInfo').value = '';
     document.getElementById('sStartDate').value = '';
     document.getElementById('sEndDate').value = '';
     document.getElementById('sDeadline').value = '';
@@ -483,6 +458,15 @@ async function deleteSeason(id) {
     if (!confirm('Delete this season? Tournaments will be unlinked but not deleted.')) return;
     await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
     loadSeasons();
+}
+
+function showSeasonInfo(id) {
+    const s = window._seasonsData.find(x => x.id === id);
+    if (s && s.info) {
+        document.getElementById('seasonInfoContent').innerHTML = s.info.replace(/\n/g, '<br>');
+        document.getElementById('seasonInfoTitle').textContent = s.name;
+        document.getElementById('seasonInfoModal').style.display = 'block';
+    }
 }
 
 async function loadTournaments() {
