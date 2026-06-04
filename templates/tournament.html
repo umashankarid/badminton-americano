@@ -176,7 +176,13 @@ async function loadTournament() {
 
     document.getElementById('tName').textContent = t.name;
     document.title = t.name;
-    document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}${t.date ? ' · ' + t.date : ''}`;
+    const totalMatches = t.matches.length;
+    const playedMatches = t.matches.filter(m => m.played).length;
+    const remaining = totalMatches - playedMatches;
+    const totalPairs = t.players.length * (t.players.length - 1) / 2;
+    const totalNeeded = Math.ceil(totalPairs / 2);
+    const matchInfo = t.current_round > 0 ? ` · Matches: ${playedMatches}/${totalNeeded} played` : ` · Total matches: ${totalNeeded}`;
+    document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}${t.date ? ' · ' + t.date : ''}${matchInfo}`;
 
     // Show edit button if not started and admin
     if (t.current_round === 0 && t.status !== 'finished' && isAdmin) {
