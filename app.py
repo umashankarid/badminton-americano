@@ -359,7 +359,7 @@ def get_tournament_by_slug(slug):
 @app.route("/api/tournaments", methods=["GET"])
 def list_tournaments():
     db = get_db()
-    rows = db.execute("SELECT * FROM tournament ORDER BY id DESC").fetchall()
+    rows = db.execute("SELECT * FROM tournament ORDER BY date DESC, id DESC").fetchall()
     db.close()
     return jsonify([dict(r) for r in rows])
 

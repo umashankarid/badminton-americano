@@ -479,6 +479,7 @@ async function loadTournaments() {
 
     if (!isAdmin) {
         tournaments = tournaments.filter(t => t.current_round === 0);
+        tournaments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         document.getElementById('tournamentListTitle').textContent = 'Tournaments Open for Registration';
     } else {
         document.getElementById('tournamentListTitle').textContent = 'Tournaments';
@@ -497,8 +498,9 @@ async function loadTournaments() {
         const adminBtns = `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
          <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>`;
         const dateStr = t.date ? ` · ${t.date}` : '';
+        const statusText = t.status === 'finished' ? 'finished' : (t.current_round > 0 ? `round ${t.current_round}` : 'not started');
         return `<div class="tournament-item"><div>${seasonTag}<a href="/tournament/${slug}">${t.name}</a></div>
-         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
+         <span><span class="status-${t.status}">${statusText} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
     }).join('') || '<p style="color:#888">No tournaments available</p>';
 }
 
