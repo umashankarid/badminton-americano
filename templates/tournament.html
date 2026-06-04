@@ -152,8 +152,8 @@ async function loadTournament() {
     document.title = t.name;
     document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}${t.date ? ' · ' + t.date : ''}`;
 
-    // Show edit button if not started
-    if (t.current_round === 0 && t.status !== 'finished') {
+    // Show edit button if not started and admin
+    if (t.current_round === 0 && t.status !== 'finished' && isAdmin) {
         document.getElementById('editSection').style.display = 'block';
         document.getElementById('etName').value = t.name;
         document.getElementById('etDate').value = t.date || '';
