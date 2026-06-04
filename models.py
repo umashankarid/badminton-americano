@@ -27,7 +27,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C')),
+            level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C', 'NA')),
             phone TEXT,
             email TEXT,
             card_type TEXT,
