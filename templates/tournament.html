@@ -118,11 +118,11 @@
                 <div id="joinPlayerList" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
                 <div id="addNewPlayer" style="display:none;border-top:1px solid #eee;padding-top:10px;margin-top:8px">
                     <p style="font-size:0.9em;color:#666;margin-bottom:8px">Player not found? Add new:</p>
-                    <div style="display:flex;gap:8px">
-                        <input type="text" id="newPlayerName" placeholder="Name" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:6px">
-                        <select id="newPlayerLevel" style="padding:8px;border:1px solid #ddd;border-radius:6px">
-                            <option value="A">A</option><option value="B">B</option><option value="C">C</option>
-                        </select>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+                        <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Player Name</label><input type="text" id="newPlayerName" placeholder="Name" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></div>
+                        <div><label style="font-size:0.8em;color:#666">Player Level</label><select id="newPlayerLevel" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
+                            <option value="C">C - Beginner</option><option value="B">B - Intermediate</option><option value="A">A - Advanced</option><option value="C">Not sure</option>
+                        </select></div>
                         <button onclick="addAndJoin()" style="padding:8px 16px">Add & Join</button>
                     </div>
                 </div>
