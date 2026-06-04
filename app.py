@@ -70,10 +70,17 @@ def list_card_types():
     db = get_db()
     try:
         rows = db.execute("SELECT * FROM card_type ORDER BY name").fetchall()
-    except:
-        rows = []
+        result = [dict(r) for r in rows]
+    except Exception:
+        db.execute("CREATE TABLE IF NOT EXISTS card_type (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)")
+        db.execute("INSERT OR IGNORE INTO card_type (name) VALUES ('Max Card')")
+        db.execute("INSERT OR IGNORE INTO card_type (name) VALUES ('Season Card')")
+        db.execute("INSERT OR IGNORE INTO card_type (name) VALUES ('Club Junior')")
+        db.commit()
+        rows = db.execute("SELECT * FROM card_type ORDER BY name").fetchall()
+        result = [dict(r) for r in rows]
     db.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(result)
 
 
 @app.route("/api/card-types", methods=["POST"])
