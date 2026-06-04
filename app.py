@@ -590,6 +590,7 @@ def upload_db():
     if not f:
         return jsonify({"error": "No file uploaded"}), 400
     f.save(DB_PATH)
+    init_db()
     return jsonify({"ok": True})
 
 
