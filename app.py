@@ -1,6 +1,6 @@
 """Flask application for Badminton Americano tournament."""
-from flask import Flask, request, jsonify, render_template
-from models import get_db, init_db
+from flask import Flask, request, jsonify, render_template, send_file
+from models import get_db, init_db, DB_PATH
 from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts
 
 app = Flask(__name__)
@@ -318,6 +318,20 @@ def record_score(mid):
 
     db.commit()
     db.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/db/download")
+def download_db():
+    return send_file(DB_PATH, as_attachment=True, download_name="americano.db")
+
+
+@app.route("/api/db/upload", methods=["POST"])
+def upload_db():
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "No file uploaded"}), 400
+    f.save(DB_PATH)
     return jsonify({"ok": True})
 
 
