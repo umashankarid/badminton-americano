@@ -278,7 +278,8 @@ async function createTournament() {
 
 async function loadTournaments() {
     const res = await fetch('/api/tournaments');
-    const tournaments = await res.json();
+    let tournaments = await res.json();
+    if (!isAdmin) tournaments = tournaments.filter(t => t.current_round === 0);
     document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
         const slug = t.name.toLowerCase().replace(/ /g, '-');
         const adminBtns = isAdmin ? `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
