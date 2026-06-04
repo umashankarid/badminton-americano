@@ -19,6 +19,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C')),
+            phone TEXT,
+            email TEXT,
             points INTEGER NOT NULL DEFAULT 0
         );
 

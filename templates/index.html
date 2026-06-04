@@ -132,6 +132,8 @@
         <h2 id="playerModalTitle">Add Player</h2>
         <input type="hidden" id="editPlayerId">
         <input type="text" id="playerName" placeholder="Player name">
+        <input type="tel" id="playerPhone" placeholder="Phone number">
+        <input type="email" id="playerEmail" placeholder="Email">
         <select id="playerLevel">
             <option value="A">Level A</option>
             <option value="B">Level B</option>
@@ -254,11 +256,17 @@ function filterEditPlayerList() {
 
 function editPlayer(id, name, level) {
     hideModal('editPlayerModal');
-    document.getElementById('editPlayerId').value = id;
-    document.getElementById('playerName').value = name;
-    document.getElementById('playerLevel').value = level;
-    document.getElementById('playerModalTitle').textContent = 'Edit Player';
-    showModal('playerModal');
+    // Fetch full player data
+    fetch(`/api/players`).then(r => r.json()).then(players => {
+        const p = players.find(x => x.id === id);
+        document.getElementById('editPlayerId').value = id;
+        document.getElementById('playerName').value = p.name;
+        document.getElementById('playerPhone').value = p.phone || '';
+        document.getElementById('playerEmail').value = p.email || '';
+        document.getElementById('playerLevel').value = p.level;
+        document.getElementById('playerModalTitle').textContent = 'Edit Player';
+        showModal('playerModal');
+    });
 }
 
 async function deletePlayer(id, name) {
@@ -271,7 +279,7 @@ async function deletePlayer(id, name) {
 
 async function savePlayer() {
     const id = document.getElementById('editPlayerId').value;
-    const data = { name: document.getElementById('playerName').value, level: document.getElementById('playerLevel').value };
+    const data = { name: document.getElementById('playerName').value, level: document.getElementById('playerLevel').value, phone: document.getElementById('playerPhone').value, email: document.getElementById('playerEmail').value };
     if (id) {
         await fetch(`/api/players/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     } else {
@@ -281,6 +289,8 @@ async function savePlayer() {
     }
     document.getElementById('editPlayerId').value = '';
     document.getElementById('playerName').value = '';
+    document.getElementById('playerPhone').value = '';
+    document.getElementById('playerEmail').value = '';
     document.getElementById('playerModalTitle').textContent = 'Add Player';
     hideModal('playerModal');
 }

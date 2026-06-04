@@ -88,7 +88,8 @@ def add_player():
         db.close()
         return jsonify({"error": "Player already exists"}), 400
     try:
-        db.execute("INSERT INTO player (name, level) VALUES (?, ?)", (data["name"], data["level"]))
+        db.execute("INSERT INTO player (name, level, phone, email) VALUES (?, ?, ?, ?)",
+                   (data["name"], data["level"], data.get("phone", ""), data.get("email", "")))
         db.commit()
     except Exception as e:
         db.close()
@@ -101,7 +102,8 @@ def add_player():
 def edit_player(pid):
     data = request.json
     db = get_db()
-    db.execute("UPDATE player SET name = ?, level = ? WHERE id = ?", (data["name"], data["level"], pid))
+    db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ? WHERE id = ?",
+               (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), pid))
     db.commit()
     db.close()
     return jsonify({"ok": True})
