@@ -377,7 +377,7 @@ def create_tournament():
         return jsonify({"error": "Tournament with this name already exists"}), 400
     cur = db.execute(
         "INSERT INTO tournament (name, level, max_points, courts, date, season_id) VALUES (?, ?, ?, ?, ?, ?)",
-        (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"), data.get("season_id"))
+        (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"), data.get("season_id") or None)
     )
     tid = cur.lastrowid
     for pid in data.get("player_ids", []):
