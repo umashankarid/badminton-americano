@@ -51,6 +51,10 @@
     <a href="/" class="back-link">← Back to Home</a>
     <h1 id="tName"></h1>
     <p class="subtitle" id="tInfo"></p>
+    <div style="margin-bottom:16px">
+        <button onclick="shareTournamentWhatsApp()" style="padding:6px 12px;font-size:0.85em;background:#25d366">📱 Share</button>
+        <button onclick="copyTournamentInfo()" style="padding:6px 12px;font-size:0.85em;background:#555;margin-left:4px">📋 Copy</button>
+    </div>
     <div id="editSection" style="display:none;margin-bottom:16px">
         <button onclick="document.getElementById('editCard').style.display='block'" style="background:#ea8600">✎ Edit Tournament</button>
     </div>
@@ -136,6 +140,27 @@
 const SLUG = "{{ tournament_slug }}";
 let TID = null;
 let isAdmin = false;
+
+function getTournamentMessage() {
+    const res = document.getElementById('tName').textContent;
+    const info = document.getElementById('tInfo').textContent;
+    const url = window.location.href;
+    const standings = document.querySelectorAll('#standings tr');
+    let standingsText = '';
+    standings.forEach((tr, i) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 3) standingsText += `${cells[0].textContent}. ${cells[1].textContent} (${cells[2].textContent} pts)\n`;
+    });
+    return `🏸 ${res}\n${info}\n\n${standingsText ? '📊 Standings:\n' + standingsText : ''}\n${url}`;
+}
+
+function shareTournamentWhatsApp() {
+    window.open(`https://wa.me/?text=${encodeURIComponent(getTournamentMessage())}`, '_blank');
+}
+
+function copyTournamentInfo() {
+    navigator.clipboard.writeText(getTournamentMessage()).then(() => alert('Copied to clipboard!'));
+}
 
 async function checkAdmin() {
     const res = await fetch('/api/admin/status');

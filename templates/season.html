@@ -48,6 +48,8 @@
     </div>
     <div class="admin-only" style="display:none;margin-bottom:16px">
         <button onclick="document.getElementById('editSeasonCard').style.display='block'" style="background:#ea8600">✎ Edit Season</button>
+        <button onclick="shareWhatsApp()" style="background:#25d366;margin-left:8px">📱 Share to WhatsApp</button>
+        <button onclick="copyInfo()" style="background:#555;margin-left:8px">📋 Copy Info</button>
     </div>
 
     <div class="card">
@@ -92,6 +94,24 @@ const SID = {{ season_id }};
 let isAdmin = false;
 let seasonData = null;
 let allPlayers = [];
+
+function getSeasonMessage() {
+    const s = seasonData;
+    const url = window.location.href;
+    const deadline = s.registration_deadline ? `\nRegistration deadline: ${s.registration_deadline}` : '';
+    const dates = s.start_date && s.end_date ? `\n${s.start_date} → ${s.end_date}` : '';
+    const players = s.players.length > 0 ? `\nRegistered: ${s.players.length} players` : '';
+    return `🏸 ${s.name}${dates}${deadline}${players}\n\n${s.description || ''}\n\nRegister here: ${url}`;
+}
+
+function shareWhatsApp() {
+    const msg = encodeURIComponent(getSeasonMessage());
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+function copyInfo() {
+    navigator.clipboard.writeText(getSeasonMessage()).then(() => alert('Copied to clipboard!'));
+}
 
 async function saveSeason() {
     const data = {
