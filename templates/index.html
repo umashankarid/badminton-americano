@@ -65,7 +65,7 @@
     </div>
 
     <div class="card">
-        <h2>Seasons</h2>
+        <h2 id="seasonListTitle">Seasons</h2>
         <div id="seasonList"></div>
     </div>
 
@@ -340,9 +340,15 @@ async function createTournament() {
 
 async function loadSeasons() {
     const res = await fetch('/api/seasons');
-    const seasons = await res.json();
+    let seasons = await res.json();
+    if (!isAdmin) {
+        seasons = seasons.filter(s => s.status === 'active');
+        document.getElementById('seasonListTitle').textContent = 'Seasons Open for Registration';
+    } else {
+        document.getElementById('seasonListTitle').textContent = 'Seasons';
+    }
     if (seasons.length === 0) {
-        document.getElementById('seasonList').innerHTML = '';
+        document.getElementById('seasonList').innerHTML = '<p style="color:#888">No seasons available</p>';
         return;
     }
     document.getElementById('seasonList').innerHTML = seasons.map(s => {
