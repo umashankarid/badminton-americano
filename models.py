@@ -95,4 +95,39 @@ def init_db():
         );
     """)
     conn.commit()
+
+    # Migrations for existing databases
+    try:
+        conn.execute("ALTER TABLE player ADD COLUMN phone TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE player ADD COLUMN email TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE tournament ADD COLUMN date TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE tournament ADD COLUMN season_id INTEGER")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE season ADD COLUMN start_date TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE season ADD COLUMN end_date TEXT")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE season ADD COLUMN registration_deadline TEXT")
+    except:
+        pass
+    conn.commit()
     conn.close()
