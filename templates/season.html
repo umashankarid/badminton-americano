@@ -29,6 +29,26 @@
     <a href="/" class="back-link">← Back to Home</a>
     <h1 id="sName"></h1>
     <p class="subtitle" id="sDesc"></p>
+    <p id="sDeadline" style="margin-bottom:16px;font-size:0.9em"></p>
+
+    <div class="card admin-only" id="editSeasonCard" style="display:none">
+        <h2>Edit Season</h2>
+        <label style="font-weight:500;display:block;margin-bottom:4px">Name</label>
+        <input type="text" id="esName">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Description</label>
+        <input type="text" id="esDesc">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Start Date</label>
+        <input type="date" id="esStartDate" onclick="this.showPicker()">
+        <label style="font-weight:500;display:block;margin-bottom:4px">End Date</label>
+        <input type="date" id="esEndDate" onclick="this.showPicker()">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Registration Deadline</label>
+        <input type="date" id="esDeadline" onclick="this.showPicker()">
+        <button onclick="saveSeason()">Save</button>
+        <button onclick="document.getElementById('editSeasonCard').style.display='none'" style="background:#666;margin-left:8px">Cancel</button>
+    </div>
+    <div class="admin-only" style="display:none;margin-bottom:16px">
+        <button onclick="document.getElementById('editSeasonCard').style.display='block'" style="background:#ea8600">✎ Edit Season</button>
+    </div>
 
     <div class="card">
         <h2>Registered Players (<span id="playerCount">0</span>)</h2>
@@ -73,6 +93,21 @@ let isAdmin = false;
 let seasonData = null;
 let allPlayers = [];
 
+async function saveSeason() {
+    const data = {
+        name: document.getElementById('esName').value,
+        description: document.getElementById('esDesc').value,
+        start_date: document.getElementById('esStartDate').value,
+        end_date: document.getElementById('esEndDate').value,
+        registration_deadline: document.getElementById('esDeadline').value
+    };
+    const res = await fetch(`/api/seasons/${SID}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('editSeasonCard').style.display = 'none';
+    loadSeason();
+}
+
 async function checkAdmin() {
     const res = await fetch('/api/admin/status');
     const data = await res.json();
@@ -88,6 +123,15 @@ async function loadSeason() {
     document.getElementById('sDesc').textContent = seasonData.description || '';
     const dateRange = seasonData.start_date && seasonData.end_date ? `${seasonData.start_date} → ${seasonData.end_date}` : '';
     if (dateRange) document.getElementById('sDesc').textContent += (seasonData.description ? ' · ' : '') + dateRange;
+    if (seasonData.registration_deadline) {
+        document.getElementById('sDeadline').innerHTML = `<strong>Registration deadline:</strong> ${seasonData.registration_deadline}`;
+    }
+    // Populate edit form
+    document.getElementById('esName').value = seasonData.name;
+    document.getElementById('esDesc').value = seasonData.description || '';
+    document.getElementById('esStartDate').value = seasonData.start_date || '';
+    document.getElementById('esEndDate').value = seasonData.end_date || '';
+    document.getElementById('esDeadline').value = seasonData.registration_deadline || '';
     document.getElementById('playerCount').textContent = seasonData.players.length;
 
     // Registered players

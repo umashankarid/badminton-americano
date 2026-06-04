@@ -28,6 +28,7 @@ def init_db():
             description TEXT,
             start_date TEXT,
             end_date TEXT,
+            registration_deadline TEXT,
             status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'finished'))
         );
 

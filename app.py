@@ -181,8 +181,8 @@ def create_season():
     if existing:
         db.close()
         return jsonify({"error": "Season with this name already exists"}), 400
-    cur = db.execute("INSERT INTO season (name, description, start_date, end_date) VALUES (?, ?, ?, ?)",
-                     (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date")))
+    cur = db.execute("INSERT INTO season (name, description, start_date, end_date, registration_deadline) VALUES (?, ?, ?, ?, ?)",
+                     (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline")))
     db.commit()
     db.close()
     return jsonify({"id": cur.lastrowid}), 201
@@ -209,6 +209,22 @@ def get_season(sid):
     return jsonify(s)
 
 
+@app.route("/api/seasons/<int:sid>", methods=["PUT"])
+@admin_required
+def edit_season(sid):
+    data = request.json
+    db = get_db()
+    existing = db.execute("SELECT id FROM season WHERE name = ? AND id != ?", (data["name"], sid)).fetchone()
+    if existing:
+        db.close()
+        return jsonify({"error": "Season with this name already exists"}), 400
+    db.execute("UPDATE season SET name=?, description=?, start_date=?, end_date=?, registration_deadline=? WHERE id=?",
+               (data["name"], data.get("description", ""), data.get("start_date"), data.get("end_date"), data.get("registration_deadline"), sid))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/seasons/<int:sid>", methods=["DELETE"])
 @admin_required
 def delete_season(sid):
@@ -226,6 +242,12 @@ def join_season(sid):
     data = request.json
     pid = data["player_id"]
     db = get_db()
+    season = db.execute("SELECT * FROM season WHERE id = ?", (sid,)).fetchone()
+    if season["registration_deadline"]:
+        from datetime import date
+        if date.today().isoformat() > season["registration_deadline"]:
+            db.close()
+            return jsonify({"error": "Registration deadline has passed"}), 400
     existing = db.execute("SELECT 1 FROM season_player WHERE season_id = ? AND player_id = ?", (sid, pid)).fetchone()
     if existing:
         db.close()

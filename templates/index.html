@@ -189,6 +189,8 @@
         <input type="date" id="sStartDate" onclick="this.showPicker()">
         <label style="font-weight:500;display:block;margin-bottom:4px">End Date</label>
         <input type="date" id="sEndDate" onclick="this.showPicker()">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Registration Deadline</label>
+        <input type="date" id="sDeadline" onclick="this.showPicker()">
         <button onclick="createSeason()">Create Season</button>
     </div>
 </div>
@@ -362,7 +364,7 @@ async function loadSeasons() {
 }
 
 async function createSeason() {
-    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value, start_date: document.getElementById('sStartDate').value, end_date: document.getElementById('sEndDate').value };
+    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value, start_date: document.getElementById('sStartDate').value, end_date: document.getElementById('sEndDate').value, registration_deadline: document.getElementById('sDeadline').value };
     if (!data.name) { alert('Enter season name'); return; }
     const res = await fetch('/api/seasons', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const result = await res.json();
@@ -371,6 +373,7 @@ async function createSeason() {
     document.getElementById('sDesc').value = '';
     document.getElementById('sStartDate').value = '';
     document.getElementById('sEndDate').value = '';
+    document.getElementById('sDeadline').value = '';
     hideModal('seasonModal');
     loadSeasons();
 }
