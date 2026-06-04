@@ -64,7 +64,7 @@
     </div>
 
     <div class="card">
-        <h2>Tournaments</h2>
+        <h2 id="tournamentListTitle">Tournaments</h2>
         <div id="tournamentList"></div>
     </div>
 </div>
@@ -279,15 +279,28 @@ async function createTournament() {
 async function loadTournaments() {
     const res = await fetch('/api/tournaments');
     let tournaments = await res.json();
-    if (!isAdmin) tournaments = tournaments.filter(t => t.current_round === 0);
+    if (!isAdmin) {
+        tournaments = tournaments.filter(t => t.current_round === 0);
+        document.getElementById('tournamentListTitle').textContent = 'Tournaments Open for Registration';
+    } else {
+        document.getElementById('tournamentListTitle').textContent = 'Tournaments';
+    }
     document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
         const slug = t.name.toLowerCase().replace(/ /g, '-');
-        const adminBtns = isAdmin ? `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
-         <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>` : '';
+        if (!isAdmin) {
+            const dateStr = t.date || 'TBD';
+            return `<div class="tournament-item" style="flex-wrap:wrap;gap:8px">
+                <div><a href="/tournament/${slug}" style="font-weight:600;font-size:1.05em">${t.name}</a>
+                <div style="font-size:0.85em;color:#666">${t.level} · ${dateStr}</div></div>
+                <a href="/tournament/${slug}" style="font-size:0.85em;color:#1a73e8">View Players →</a>
+            </div>`;
+        }
+        const adminBtns = `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
+         <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>`;
         const dateStr = t.date ? ` · ${t.date}` : '';
         return `<div class="tournament-item"><a href="/tournament/${slug}">${t.name}</a>
          <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
-    }).join('') || '<p style="color:#888">No tournaments yet</p>';
+    }).join('') || '<p style="color:#888">No tournaments available</p>';
 }
 
 let editingTournamentId = null;
