@@ -1,18 +1,18 @@
 """Pairing engine: rotate partners, balance opponents by points, handle sit-outs."""
 from itertools import combinations
-from random import shuffle
+from random import shuffle, sample
 
 
 def generate_all_partnerships(player_ids):
     """Return all possible partner pairs from player list."""
-    return list(combinations(player_ids, 2))
+    return list(combinations(sorted(player_ids), 2))
 
 
 def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_out_counts=None):
     """Generate one round of matches.
 
     - Handles non-divisible-by-4 player counts by sitting out players.
-    - Players who have sat out least get priority to play.
+    - Players who have sat out the MOST get priority to play.
     - Partners are chosen from unused pairs (rotate everyone with everyone).
     - Opponents are balanced by combined team points.
     - Returns (matches, sitting_out): matches=[(a1, a2, b1, b2), ...], sitting_out=[player_ids]
@@ -31,51 +31,78 @@ def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_o
     elif n % 4 != 0:
         num_sit = n % 4
         sorted_players = sorted(player_ids, key=lambda p: sit_out_counts.get(p, 0), reverse=True)
-        active_players = sorted_players[:len(player_ids) - num_sit]
-        sitting_out = sorted_players[len(player_ids) - num_sit:]
+        active_players = sorted_players[:n - num_sit]
+        sitting_out = sorted_players[n - num_sit:]
     else:
-        active_players = player_ids
+        active_players = list(player_ids)
         sitting_out = []
 
+    # Find valid matches: pick pairs of unused partnerships that form a complete match (4 distinct players)
     available_pairs = [p for p in generate_all_partnerships(active_players) if p not in used_pairs]
     if not available_pairs:
         return None, sitting_out
 
-    # Sort available pairs by combined points for balanced pairing, or random for round 1
-    if player_points and any(v != 0 for v in player_points.values()):
-        available_pairs.sort(key=lambda p: player_points.get(p[0], 0) + player_points.get(p[1], 0), reverse=True)
-    else:
-        shuffle(available_pairs)
+    # Try to find the best set of matches for this round
+    # A match = 2 unused pairs with 4 distinct players
+    best_matches = _find_matches(available_pairs, courts, player_points)
 
-    # Greedily select non-overlapping pairs to fill courts*2 team slots
-    selected_teams = []
-    used_in_round = set()
-    for pair in available_pairs:
-        if pair[0] in used_in_round or pair[1] in used_in_round:
-            continue
-        selected_teams.append(pair)
-        used_in_round.update(pair)
-        if len(selected_teams) == courts * 2:
-            break
-
-    if len(selected_teams) < 2:
+    if not best_matches:
         return None, sitting_out
 
-    # Ensure even number of teams
-    if len(selected_teams) % 2 != 0:
-        selected_teams = selected_teams[:-1]
+    return best_matches, sitting_out
 
-    # Sort teams by combined points for balanced matchups
-    selected_teams.sort(key=lambda p: player_points.get(p[0], 0) + player_points.get(p[1], 0))
 
-    # Pair adjacent teams (closest in points) as opponents
+def _find_matches(available_pairs, courts, player_points):
+    """Find up to `courts` matches from available pairs, maximizing court usage."""
+    # Build candidate matches: all valid (pair_a, pair_b) with 4 distinct players
+    candidates = []
+    pair_set = set(available_pairs)
+    indexed = {}
+    for p in available_pairs:
+        for pid in p:
+            indexed.setdefault(pid, []).append(p)
+
+    seen = set()
+    for pair_a in available_pairs:
+        for pair_b in available_pairs:
+            if pair_b <= pair_a:
+                continue
+            four = {pair_a[0], pair_a[1], pair_b[0], pair_b[1]}
+            if len(four) == 4:
+                key = (pair_a, pair_b)
+                if key not in seen:
+                    seen.add(key)
+                    combined = sum(player_points.get(p, 0) for p in four)
+                    # Score difference between teams for balance
+                    team_a_pts = player_points.get(pair_a[0], 0) + player_points.get(pair_a[1], 0)
+                    team_b_pts = player_points.get(pair_b[0], 0) + player_points.get(pair_b[1], 0)
+                    balance = abs(team_a_pts - team_b_pts)
+                    candidates.append((pair_a, pair_b, balance))
+
+    if not candidates:
+        return None
+
+    # Sort by balance (prefer more balanced matches)
+    candidates.sort(key=lambda x: x[2])
+
+    # Greedily select non-overlapping matches up to court count
     matches = []
-    for i in range(0, len(selected_teams), 2):
-        team_a = selected_teams[i]
-        team_b = selected_teams[i + 1]
-        matches.append((team_a[0], team_a[1], team_b[0], team_b[1]))
+    used_players = set()
+    used_pairs_in_round = set()
+    for pair_a, pair_b, _ in candidates:
+        four = {pair_a[0], pair_a[1], pair_b[0], pair_b[1]}
+        if four & used_players:
+            continue
+        if pair_a in used_pairs_in_round or pair_b in used_pairs_in_round:
+            continue
+        matches.append((pair_a[0], pair_a[1], pair_b[0], pair_b[1]))
+        used_players.update(four)
+        used_pairs_in_round.add(pair_a)
+        used_pairs_in_round.add(pair_b)
+        if len(matches) == courts:
+            break
 
-    return matches, sitting_out
+    return matches if matches else None
 
 
 def get_used_pairs(db, tournament_id):
