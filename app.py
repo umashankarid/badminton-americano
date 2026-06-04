@@ -49,6 +49,11 @@ def admin_status():
     return jsonify({"admin": session.get("admin", False)})
 
 
+@app.route("/how-it-works")
+def how_it_works():
+    return render_template("how-it-works.html")
+
+
 @app.route("/tournament/<slug>")
 def tournament_view(slug):
     return render_template("tournament.html", tournament_slug=slug)
