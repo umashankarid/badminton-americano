@@ -112,7 +112,7 @@
         <h2 id="tournamentModalTitle">Create Tournament</h2>
         <input type="text" id="tName" placeholder="Tournament name">
         <label for="tDate" style="font-weight:500;display:block;margin-bottom:4px">Tournament Date</label>
-        <input type="date" id="tDate">
+        <input type="date" id="tDate" onclick="this.showPicker()">
         <label for="tLevel" style="font-weight:500;display:block;margin-bottom:4px">Tournament Level</label>
         <select id="tLevel" onchange="loadTournamentPlayers()">
             <option value="No-level">No-level (Mixed)</option>
