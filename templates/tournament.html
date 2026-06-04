@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+        h1 { color: #1a73e8; margin-bottom: 8px; font-size: 1.5em; }
+        .subtitle { color: #666; margin-bottom: 16px; font-size: 0.9em; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h2 { margin-bottom: 12px; font-size: 1.2em; }
+        button { padding: 12px 24px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; touch-action: manipulation; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .match-card { border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+        .match-card.played { background: #f8fdf8; border-color: #c8e6c9; }
+        .match-teams { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 4px; }
+        .team { font-weight: 600; font-size: 1em; }
+        .vs { color: #999; font-size: 0.85em; }
+        .score-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .score-input input { width: 70px; padding: 12px; text-align: center; border: 2px solid #ddd; border-radius: 8px; font-size: 1.3em; font-weight: 700; }
+        .score-input input:focus { border-color: #1a73e8; outline: none; }
+        .score-input button { padding: 12px 28px; font-size: 1.1em; font-weight: 600; }
+        .score-display { font-size: 1.3em; font-weight: 700; color: #1a73e8; display: flex; align-items: center; gap: 12px; }
+        .edit-score-btn { background: #f0f0f0; color: #333; padding: 6px 12px; font-size: 0.8em; border-radius: 6px; }
+        .edit-score-btn:hover { background: #ddd; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-size: 0.9em; }
+        .rank { font-weight: 700; color: #1a73e8; }
+        .back-link { display: inline-block; margin-bottom: 12px; color: #1a73e8; text-decoration: none; }
+        .round-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
+        .status-active { background: #e8f5e9; color: #2e7d32; }
+        .status-finished { background: #fff3e0; color: #e65100; }
+        .sit-out { background: #fff3e0; border-radius: 8px; padding: 10px; margin-bottom: 12px; color: #e65100; font-size: 0.9em; }
+        .layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width: 768px) {
+            .layout { grid-template-columns: 2fr 1fr; }
+        }
+        .summary { text-align: center; padding: 20px; }
+        .summary .winner { font-size: 1.5em; font-weight: 700; color: #34a853; margin-bottom: 12px; }
+        .court-label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1 id="tName"></h1>
+    <p class="subtitle" id="tInfo"></p>
+    <div id="editSection" style="display:none;margin-bottom:16px">
+        <button onclick="document.getElementById('editCard').style.display='block'" style="background:#ea8600">✎ Edit Tournament</button>
+    </div>
+
+    <div class="card" id="editCard" style="display:none">
+        <h2>Edit Tournament</h2>
+        <label style="font-weight:500;display:block;margin-bottom:4px">Tournament Name</label>
+        <input type="text" id="etName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Level</label>
+        <select id="etLevel" onchange="loadEditPlayers()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+            <option value="No-level">No-level (Mixed)</option>
+            <option value="A">Level A</option>
+            <option value="B">Level B</option>
+            <option value="C">Level C</option>
+        </select>
+        <label style="font-weight:500;display:block;margin-bottom:4px">Max Points to Win</label>
+        <input type="number" id="etMaxPoints" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Number of Courts</label>
+        <input type="number" id="etCourts" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Players</label>
+        <input type="text" id="etSearch" placeholder="Search players..." oninput="filterEditPlayers()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px">
+        <div id="etPlayerList" style="max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+        <button onclick="saveTournamentEdit()">Save</button>
+        <button onclick="document.getElementById('editCard').style.display='none'" style="background:#666;margin-left:8px">Cancel</button>
+    </div>
+
+    <div id="summaryCard" class="card" style="display:none">
+        <div class="summary">
+            <div>🏆</div>
+            <div class="winner" id="summaryWinner"></div>
+            <div id="summaryText" style="color:#666;margin-bottom:16px"></div>
+        </div>
+        <table><thead><tr><th>#</th><th>Player</th><th>Points</th><th>W/L</th></tr></thead>
+        <tbody id="summaryStandings"></tbody></table>
+    </div>
+
+    <div class="layout">
+        <div>
+            <div class="card">
+                <div class="round-header">
+                    <h2 id="roundTitle">Current Round</h2>
+                    <span id="roundStatus" class="status-badge status-active"></span>
+                </div>
+                <div id="sitOutInfo"></div>
+                <div id="currentMatches" style="margin-top:12px"></div>
+            </div>
+
+            <div class="card">
+                <h2>All Rounds</h2>
+                <div id="allRounds"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2>Standings</h2>
+                <table><thead><tr><th>#</th><th>Player</th><th>Pts</th></tr></thead>
+                <tbody id="standings"></tbody></table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const SLUG = "{{ tournament_slug }}";
+let TID = null;
+
+async function loadTournament() {
+    const res = await fetch(`/api/tournaments/by-slug/${SLUG}`);
+    const t = await res.json();
+    if (t.error) { document.getElementById('tName').textContent = 'Tournament not found'; return; }
+    TID = t.id;
+
+    document.getElementById('tName').textContent = t.name;
+    document.title = t.name;
+    document.getElementById('tInfo').textContent = `Level: ${t.level} · Max Points: ${t.max_points} · Courts: ${t.courts} · Round: ${t.current_round}`;
+
+    // Show edit button if not started
+    if (t.current_round === 0 && t.status !== 'finished') {
+        document.getElementById('editSection').style.display = 'block';
+        document.getElementById('etName').value = t.name;
+        document.getElementById('etLevel').value = t.level;
+        document.getElementById('etMaxPoints').value = t.max_points;
+        document.getElementById('etCourts').value = t.courts;
+        window._tournamentPlayerIds = t.players.map(p => p.id);
+        loadEditPlayers();
+    } else {
+        document.getElementById('editSection').style.display = 'none';
+    }
+
+    // Standings (always visible)
+    document.getElementById('standings').innerHTML = t.players.map((p, i) =>
+        `<tr><td class="rank">${i+1}</td><td><a href="/player/${p.id}" style="color:#333;text-decoration:none">${p.name}</a></td><td>${p.tournament_points}</td></tr>`
+    ).join('');
+
+    // Tournament finished - show summary
+    if (t.status === 'finished') {
+        document.getElementById('roundStatus').textContent = 'Finished';
+        document.getElementById('roundStatus').className = 'status-badge status-finished';
+        document.getElementById('summaryCard').style.display = 'block';
+        document.getElementById('summaryWinner').textContent = t.players[0]?.name + ' wins!';
+        document.getElementById('summaryText').textContent = `${t.current_round} rounds played · ${t.players.length} players`;
+        document.getElementById('summaryStandings').innerHTML = t.players.map((p, i) => {
+            const matchesPlayed = t.matches.filter(m => m.played && (m.player_a1===p.id||m.player_a2===p.id||m.player_b1===p.id||m.player_b2===p.id));
+            const wins = matchesPlayed.filter(m => {
+                const onA = m.player_a1===p.id||m.player_a2===p.id;
+                return onA ? m.score_a > m.score_b : m.score_b > m.score_a;
+            }).length;
+            return `<tr><td class="rank">${i+1}</td><td>${p.name}</td><td>${p.tournament_points}</td><td>${wins}/${matchesPlayed.length-wins}</td></tr>`;
+        }).join('');
+    }
+
+    // Auto-generate or show matches
+    const currentMatches = t.matches.filter(m => m.round_num === t.current_round);
+    const allPlayed = currentMatches.length > 0 && currentMatches.every(m => m.played);
+
+    if (t.current_round === 0 && t.status !== 'finished') {
+        document.getElementById('currentMatches').innerHTML = '<button onclick="startTournament()" style="background:#34a853;font-size:1.2em;padding:16px 32px">▶ Start Tournament</button>';
+        return;
+    }
+
+    if (allPlayed && t.status !== 'finished') {
+        await nextRound();
+        return;
+    }
+
+    // Show current round
+    const unplayed = t.matches.filter(m => m.round_num === t.current_round && !m.played);
+    const played = t.matches.filter(m => m.round_num === t.current_round && m.played);
+    document.getElementById('roundTitle').textContent = `Round ${t.current_round}`;
+
+    let html = '';
+    for (const m of played) html += matchCardPlayed(m);
+    for (const m of unplayed) html += matchCardInput(m);
+    document.getElementById('currentMatches').innerHTML = html;
+
+    // All rounds history
+    const rounds = {};
+    for (const m of t.matches) {
+        if (!rounds[m.round_num]) rounds[m.round_num] = [];
+        rounds[m.round_num].push(m);
+    }
+    let allHtml = '';
+    for (const [rnum, matches] of Object.entries(rounds).sort((a,b) => b[0]-a[0])) {
+        if (parseInt(rnum) === t.current_round) continue;
+        allHtml += `<h3 style="margin:12px 0 8px">Round ${rnum}</h3>`;
+        for (const m of matches) allHtml += matchCardPlayed(m);
+    }
+    document.getElementById('allRounds').innerHTML = allHtml || '<p style="color:#888">No previous rounds</p>';
+}
+
+function startTournament() {
+    if (!confirm('Start the tournament? You will not be able to edit settings after this.')) return;
+    nextRound();
+}
+
+function matchCardInput(m) {
+    return `<div class="match-card">
+        <div class="court-label">Court ${m.court_num}</div>
+        <div class="match-teams"><span class="team">${m.a1_name} + ${m.a2_name}</span><span class="vs">vs</span><span class="team">${m.b1_name} + ${m.b2_name}</span></div>
+        <div class="score-input">
+            <input type="number" id="sa_${m.id}" min="0" max="99" placeholder="0" inputmode="numeric">
+            <span style="font-size:1.3em;font-weight:700">-</span>
+            <input type="number" id="sb_${m.id}" min="0" max="99" placeholder="0" inputmode="numeric">
+            <button onclick="submitScore(${m.id})">Submit</button>
+        </div>
+    </div>`;
+}
+
+function matchCardPlayed(m) {
+    return `<div class="match-card played">
+        <div class="court-label">Court ${m.court_num}</div>
+        <div class="match-teams"><span class="team">${m.a1_name} + ${m.a2_name}</span><span class="vs">vs</span><span class="team">${m.b1_name} + ${m.b2_name}</span></div>
+        <div class="score-display">
+            <span>${m.score_a} - ${m.score_b}</span>
+            <button class="edit-score-btn" onclick="editScore(${m.id}, ${m.score_a}, ${m.score_b})">Edit</button>
+        </div>
+    </div>`;
+}
+
+function editScore(mid, oldA, oldB) {
+    const newA = prompt('Team A score:', oldA);
+    if (newA === null) return;
+    const newB = prompt('Team B score:', oldB);
+    if (newB === null) return;
+    submitScoreValues(mid, parseInt(newA), parseInt(newB));
+}
+
+async function submitScore(mid) {
+    const score_a = parseInt(document.getElementById(`sa_${mid}`).value);
+    const score_b = parseInt(document.getElementById(`sb_${mid}`).value);
+    await submitScoreValues(mid, score_a, score_b);
+}
+
+async function submitScoreValues(mid, score_a, score_b) {
+    if (isNaN(score_a) || isNaN(score_b)) { alert('Please enter valid scores'); return; }
+    const res = await fetch(`/api/matches/${mid}/score`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ score_a, score_b })
+    });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    loadTournament();
+}
+
+async function nextRound() {
+    const res = await fetch(`/api/tournaments/${TID}/next-round`, { method: 'POST' });
+    const result = await res.json();
+    if (result.finished) {
+        loadTournament();
+        return;
+    }
+    if (result.sitting_out && result.sitting_out.length > 0) {
+        document.getElementById('sitOutInfo').innerHTML = `<div class="sit-out">🪑 Sitting out: ${result.sitting_out.join(', ')}</div>`;
+    } else {
+        document.getElementById('sitOutInfo').innerHTML = '';
+    }
+    loadTournament();
+}
+
+async function loadEditPlayers() {
+    const level = document.getElementById('etLevel').value;
+    const url = level !== 'No-level' ? `/api/players?level=${level}` : '/api/players';
+    const res = await fetch(url);
+    const players = await res.json();
+    const selected = window._tournamentPlayerIds || [];
+    document.getElementById('etPlayerList').innerHTML = players.map(p =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:4px" data-name="${p.name.toLowerCase()}"><input type="checkbox" id="etp_${p.id}" value="${p.id}" ${selected.includes(p.id)?'checked':''}><label for="etp_${p.id}">${p.name}</label></div>`
+    ).join('');
+}
+
+function filterEditPlayers() {
+    const q = document.getElementById('etSearch').value.toLowerCase();
+    document.querySelectorAll('#etPlayerList > div').forEach(el => {
+        el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+    });
+}
+
+async function saveTournamentEdit() {
+    const checkboxes = document.querySelectorAll('#etPlayerList input:checked');
+    const player_ids = Array.from(checkboxes).map(c => parseInt(c.value));
+    if (player_ids.length < 4) {
+        alert('Select at least 4 players');
+        return;
+    }
+    const data = {
+        name: document.getElementById('etName').value,
+        level: document.getElementById('etLevel').value,
+        max_points: parseInt(document.getElementById('etMaxPoints').value),
+        courts: parseInt(document.getElementById('etCourts').value),
+        player_ids
+    };
+    const res = await fetch(`/api/tournaments/${TID}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('editCard').style.display = 'none';
+    const newSlug = data.name.toLowerCase().replace(/ /g, '-');
+    if (newSlug !== SLUG) { window.location.href = `/tournament/${newSlug}`; return; }
+    loadTournament();
+}
+
+loadTournament();
+</script>
+</body>
+</html>

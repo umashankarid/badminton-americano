@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Americano</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #1a73e8; margin-bottom: 30px; }
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h2 { margin-bottom: 16px; color: #333; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .nav-btn { display: block; padding: 20px; background: #1a73e8; color: white; text-align: center; border-radius: 8px; text-decoration: none; font-size: 1.1em; font-weight: 500; cursor: pointer; border: none; }
+        .nav-btn:hover { background: #1557b0; }
+        .nav-btn.green { background: #34a853; }
+        .nav-btn.green:hover { background: #2d8f47; }
+        .nav-btn.orange { background: #ea8600; }
+        .nav-btn.orange:hover { background: #c77200; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; }
+        button:hover { background: #1557b0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }
+        .badge-A { background: #e8f5e9; color: #2e7d32; }
+        .badge-B { background: #e3f2fd; color: #1565c0; }
+        .badge-C { background: #fff3e0; color: #e65100; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; }
+        .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 600px; margin: 50px auto; max-height: 80vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 16px; }
+        .close { float: right; font-size: 1.5em; cursor: pointer; }
+        .player-check { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #eee; border-radius: 4px; }
+        .player-check label { flex: 1; cursor: pointer; }
+        .tournament-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; }
+        .tournament-item a { color: #1a73e8; text-decoration: none; font-weight: 500; }
+        .status-active { color: #34a853; }
+        .status-finished { color: #ea8600; }
+        .edit-btn { background: #f0f0f0; color: #333; padding: 4px 10px; font-size: 0.85em; }
+        .edit-btn:hover { background: #ddd; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏸 Badminton Americano</h1>
+
+    <div class="card">
+        <div class="grid">
+            <button class="nav-btn" onclick="showModal('playerModal')">➕ Add Player</button>
+            <button class="nav-btn orange" onclick="showEditPlayerModal()">✎ Edit Player</button>
+            <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Tournaments</h2>
+        <div id="tournamentList"></div>
+    </div>
+</div>
+
+<!-- Add Player Modal -->
+<div id="playerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('playerModal')">&times;</span>
+        <h2 id="playerModalTitle">Add Player</h2>
+        <input type="hidden" id="editPlayerId">
+        <input type="text" id="playerName" placeholder="Player name">
+        <select id="playerLevel">
+            <option value="A">Level A</option>
+            <option value="B">Level B</option>
+            <option value="C">Level C</option>
+        </select>
+        <button onclick="savePlayer()">Save</button>
+    </div>
+</div>
+
+<!-- Edit Player Modal -->
+<div id="editPlayerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('editPlayerModal')">&times;</span>
+        <h2>Edit Player</h2>
+        <input type="text" id="editPlayerSearch" placeholder="Search player..." oninput="filterEditPlayerList()">
+        <div id="editPlayerList" style="max-height:300px;overflow-y:auto"></div>
+    </div>
+</div></div>
+
+<!-- Create Tournament Modal -->
+<div id="tournamentModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('tournamentModal')">&times;</span>
+        <h2 id="tournamentModalTitle">Create Tournament</h2>
+        <input type="text" id="tName" placeholder="Tournament name">
+        <label for="tLevel" style="font-weight:500;display:block;margin-bottom:4px">Tournament Level</label>
+        <select id="tLevel" onchange="loadTournamentPlayers()">
+            <option value="No-level">No-level (Mixed)</option>
+            <option value="A">Level A</option>
+            <option value="B">Level B</option>
+            <option value="C">Level C</option>
+        </select>
+        <label for="tMaxPoints" style="font-weight:500;display:block;margin-bottom:4px">Max Points to Win</label>
+        <input type="number" id="tMaxPoints" value="15" min="1">
+        <label for="tCourts" style="font-weight:500;display:block;margin-bottom:4px">Number of Courts</label>
+        <input type="number" id="tCourts" value="1" min="1">
+        <h3 style="margin:10px 0">Select Players</h3>
+        <input type="text" id="tPlayerSearch" placeholder="Search players..." oninput="filterTournamentPlayers()">
+        <div style="margin-bottom:8px"><button type="button" onclick="toggleAllPlayers(true)" style="padding:4px 10px;font-size:0.85em">Select All</button> <button type="button" onclick="toggleAllPlayers(false)" style="padding:4px 10px;font-size:0.85em;background:#666">Deselect All</button> <span id="tPlayerCount" style="margin-left:8px;color:#666;font-size:0.9em"></span></div>
+        <div id="tPlayerList" style="max-height:250px;overflow-y:auto"></div>
+        <button onclick="createTournament()" style="margin-top:12px">Create Tournament</button>
+    </div>
+</div>
+
+<script>
+function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } }
+function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+
+async function loadPlayers() {
+    const res = await fetch('/api/players');
+    const players = await res.json();
+    document.getElementById('editPlayerList').innerHTML = players.map(p =>
+        `<div class="player-check" data-name="${p.name.toLowerCase()}" style="justify-content:space-between">
+            <span>${p.name} <span class="badge badge-${p.level}">${p.level}</span></span>
+            <button class="edit-btn" onclick="editPlayer(${p.id},'${p.name}','${p.level}')">Edit</button>
+        </div>`
+    ).join('');
+}
+
+async function showEditPlayerModal() {
+    await loadPlayers();
+    document.getElementById('editPlayerSearch').value = '';
+    document.getElementById('editPlayerModal').style.display = 'block';
+}
+
+function filterEditPlayerList() {
+    const q = document.getElementById('editPlayerSearch').value.toLowerCase();
+    document.querySelectorAll('#editPlayerList .player-check').forEach(el => {
+        el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+    });
+}
+
+function editPlayer(id, name, level) {
+    hideModal('editPlayerModal');
+    document.getElementById('editPlayerId').value = id;
+    document.getElementById('playerName').value = name;
+    document.getElementById('playerLevel').value = level;
+    document.getElementById('playerModalTitle').textContent = 'Edit Player';
+    showModal('playerModal');
+}
+
+async function savePlayer() {
+    const id = document.getElementById('editPlayerId').value;
+    const data = { name: document.getElementById('playerName').value, level: document.getElementById('playerLevel').value };
+    if (id) {
+        await fetch(`/api/players/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    } else {
+        const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        const result = await res.json();
+        if (result.error) { alert(result.error); return; }
+    }
+    document.getElementById('editPlayerId').value = '';
+    document.getElementById('playerName').value = '';
+    document.getElementById('playerModalTitle').textContent = 'Add Player';
+    hideModal('playerModal');
+}
+
+async function loadTournamentPlayers() {
+    const level = document.getElementById('tLevel').value;
+    const url = level !== 'No-level' ? `/api/players?level=${level}` : '/api/players';
+    const res = await fetch(url);
+    const players = await res.json();
+    document.getElementById('tPlayerSearch').value = '';
+    document.getElementById('tPlayerList').innerHTML = players.map(p =>
+        `<div class="player-check" data-name="${p.name.toLowerCase()}"><input type="checkbox" id="tp_${p.id}" value="${p.id}" onchange="updatePlayerCount()"><label for="tp_${p.id}">${p.name}</label></div>`
+    ).join('');
+    updatePlayerCount();
+}
+
+function filterTournamentPlayers() {
+    const query = document.getElementById('tPlayerSearch').value.toLowerCase();
+    document.querySelectorAll('#tPlayerList .player-check').forEach(el => {
+        el.style.display = el.dataset.name.includes(query) ? '' : 'none';
+    });
+}
+
+function toggleAllPlayers(state) {
+    document.querySelectorAll('#tPlayerList .player-check:not([style*="display: none"]) input').forEach(c => c.checked = state);
+    updatePlayerCount();
+}
+
+function updatePlayerCount() {
+    const count = document.querySelectorAll('#tPlayerList input:checked').length;
+    document.getElementById('tPlayerCount').textContent = `${count} selected`;
+}
+
+async function createTournament() {
+    const checkboxes = document.querySelectorAll('#tPlayerList input:checked');
+    const player_ids = Array.from(checkboxes).map(c => parseInt(c.value));
+    if (player_ids.length < 4) {
+        alert('Select at least 4 players');
+        return;
+    }
+    const data = {
+        name: document.getElementById('tName').value,
+        level: document.getElementById('tLevel').value,
+        max_points: parseInt(document.getElementById('tMaxPoints').value),
+        courts: parseInt(document.getElementById('tCourts').value),
+        player_ids
+    };
+    let res;
+    if (editingTournamentId) {
+        res = await fetch(`/api/tournaments/${editingTournamentId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    } else {
+        res = await fetch('/api/tournaments', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    }
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    hideModal('tournamentModal');
+    editingTournamentId = null;
+    document.getElementById('tournamentModalTitle').textContent = 'Create Tournament';
+    loadTournaments();
+    if (result.id) { const slug = data.name.toLowerCase().replace(/ /g, '-'); window.location.href = `/tournament/${slug}`; }
+}
+
+async function loadTournaments() {
+    const res = await fetch('/api/tournaments');
+    const tournaments = await res.json();
+    document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
+        const slug = t.name.toLowerCase().replace(/ /g, '-');
+        return `<div class="tournament-item"><a href="/tournament/${slug}">${t.name}</a>
+         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}</span>
+         ${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
+         <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button></span></div>`;
+    }).join('') || '<p style="color:#888">No tournaments yet</p>';
+}
+
+let editingTournamentId = null;
+
+async function editTournament(id) {
+    editingTournamentId = id;
+    const res = await fetch(`/api/tournaments/${id}`);
+    const t = await res.json();
+    document.getElementById('tName').value = t.name;
+    document.getElementById('tLevel').value = t.level;
+    document.getElementById('tMaxPoints').value = t.max_points;
+    document.getElementById('tCourts').value = t.courts;
+    document.getElementById('tournamentModalTitle').textContent = 'Edit Tournament';
+    await loadTournamentPlayers();
+    const playerIds = t.players.map(p => p.id);
+    document.querySelectorAll('#tPlayerList input').forEach(c => {
+        c.checked = playerIds.includes(parseInt(c.value));
+    });
+    updatePlayerCount();
+    showModal('tournamentModal');
+}
+
+async function deleteTournament(id, status) {
+    const msg = status === 'active'
+        ? '⚠️ This tournament is still active! Are you sure you want to delete it?'
+        : 'Delete this tournament?';
+    if (!confirm(msg)) return;
+    await fetch(`/api/tournaments/${id}`, { method: 'DELETE' });
+    loadTournaments();
+}
+
+loadTournaments();
+</script>
+</body>
+</html>

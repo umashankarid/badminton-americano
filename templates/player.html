@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Stats</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; padding: 16px; }
+        h1 { color: #1a73e8; margin-bottom: 4px; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h2 { margin-bottom: 12px; font-size: 1.1em; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-box { text-align: center; padding: 16px; background: #f8f9fa; border-radius: 8px; }
+        .stat-box .value { font-size: 1.8em; font-weight: 700; color: #1a73e8; }
+        .stat-box .label { font-size: 0.85em; color: #666; }
+        .back-link { display: inline-block; margin-bottom: 12px; color: #1a73e8; text-decoration: none; }
+        .match-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .match-item:last-child { border: none; }
+        .match-result { font-weight: 700; }
+        .win { color: #2e7d32; }
+        .loss { color: #c62828; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }
+        .badge-A { background: #e8f5e9; color: #2e7d32; }
+        .badge-B { background: #e3f2fd; color: #1565c0; }
+        .badge-C { background: #fff3e0; color: #e65100; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1 id="pName"></h1>
+    <p class="subtitle" id="pLevel"></p>
+
+    <div class="card">
+        <div class="stats-grid">
+            <div class="stat-box"><div class="value" id="pPoints">0</div><div class="label">Net Points</div></div>
+            <div class="stat-box"><div class="value" id="pWins">0</div><div class="label">Wins</div></div>
+            <div class="stat-box"><div class="value" id="pLosses">0</div><div class="label">Losses</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Match History</h2>
+        <div id="matchHistory"></div>
+    </div>
+</div>
+
+<script>
+const PID = {{ player_id }};
+
+async function loadStats() {
+    const res = await fetch(`/api/players/${PID}/stats`);
+    const p = await res.json();
+
+    document.getElementById('pName').textContent = p.name;
+    document.title = p.name + ' - Stats';
+    document.getElementById('pLevel').innerHTML = `Level <span class="badge badge-${p.level}">${p.level}</span> · ${p.total_matches} matches played`;
+    document.getElementById('pPoints').textContent = p.points;
+    document.getElementById('pWins').textContent = p.wins;
+    document.getElementById('pLosses').textContent = p.losses;
+
+    document.getElementById('matchHistory').innerHTML = p.matches.map(m => {
+        const partner = m.on_team_a
+            ? (m.player_a1 === PID ? m.a2_name : m.a1_name)
+            : (m.player_b1 === PID ? m.b2_name : m.b1_name);
+        const opponents = m.on_team_a
+            ? `${m.b1_name} + ${m.b2_name}`
+            : `${m.a1_name} + ${m.a2_name}`;
+        const myScore = m.on_team_a ? m.score_a : m.score_b;
+        const oppScore = m.on_team_a ? m.score_b : m.score_a;
+        const cls = m.won ? 'win' : 'loss';
+        return `<div class="match-item">
+            <div><strong>w/ ${partner}</strong> vs ${opponents}<br><small style="color:#888">${m.tournament_name}</small></div>
+            <div class="match-result ${cls}">${myScore}-${oppScore}</div>
+        </div>`;
+    }).join('') || '<p style="color:#888">No matches yet</p>';
+}
+
+loadStats();
+</script>
+</body>
+</html>
