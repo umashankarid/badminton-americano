@@ -114,6 +114,7 @@
             </div>
             <div class="card" id="joinCard" style="display:none">
                 <h2>Join Tournament</h2>
+                <button id="addAllSeasonBtn" onclick="addAllSeasonPlayers()" style="display:none;margin-bottom:12px;background:#7b1fa2">Add All Season Players</button>
                 <input type="text" id="joinSearch" placeholder="Search player name..." oninput="filterJoinPlayers()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">
                 <div id="joinPlayerList" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
                 <div id="addNewPlayer" style="display:none;border-top:1px solid #eee;padding-top:10px;margin-top:8px">
@@ -176,6 +177,11 @@ async function loadTournament() {
     // Show join card if not started
     if (t.current_round === 0 && t.status !== 'finished') {
         document.getElementById('joinCard').style.display = 'block';
+        if (t.season_id) {
+            document.getElementById('addAllSeasonBtn').style.display = '';
+        } else {
+            document.getElementById('addAllSeasonBtn').style.display = 'none';
+        }
         loadJoinPlayers(t.players.map(p => p.id), t.season_id);
     } else {
         document.getElementById('joinCard').style.display = 'none';
@@ -356,6 +362,14 @@ async function joinTournament(pid) {
     const res = await fetch(`/api/tournaments/${TID}/join`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: pid}) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
+    loadTournament();
+}
+
+async function addAllSeasonPlayers() {
+    const available = allPlayers.filter(p => !tournamentPlayerIds.includes(p.id));
+    for (const p of available) {
+        await fetch(`/api/tournaments/${TID}/join`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: p.id}) });
+    }
     loadTournament();
 }
 
