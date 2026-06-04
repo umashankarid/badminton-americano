@@ -15,12 +15,22 @@ def get_db():
 def init_db():
     conn = get_db()
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS card_type (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        );
+
+        INSERT OR IGNORE INTO card_type (name) VALUES ('Max Card');
+        INSERT OR IGNORE INTO card_type (name) VALUES ('Season Card');
+        INSERT OR IGNORE INTO card_type (name) VALUES ('Club Junior');
+
         CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C')),
             phone TEXT,
             email TEXT,
+            card_type TEXT,
             points INTEGER NOT NULL DEFAULT 0
         );
 

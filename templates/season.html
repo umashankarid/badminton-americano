@@ -64,6 +64,7 @@
                     <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Player Name</label><input type="text" id="newPlayerName" placeholder="Name"></div>
                     <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Phone</label><input type="tel" id="newPlayerPhone" placeholder="Phone"></div>
                     <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Email</label><input type="email" id="newPlayerEmail" placeholder="Email"></div>
+                    <div><label style="font-size:0.8em;color:#666">Card Type</label><select id="newPlayerCard"></select></div>
                     <div><label style="font-size:0.8em;color:#666">Player Level</label><select id="newPlayerLevel"><option value="C">C - Beginner</option><option value="B">B - Intermediate</option><option value="A">A - Advanced</option><option value="C">Not sure</option></select></div>
                     <button onclick="addAndJoin()">Add & Join</button>
                 </div>
@@ -216,8 +217,9 @@ async function addAndJoin() {
     const level = document.getElementById('newPlayerLevel').value;
     const phone = document.getElementById('newPlayerPhone').value.trim();
     const email = document.getElementById('newPlayerEmail').value.trim();
+    const card_type = document.getElementById('newPlayerCard').value;
     if (!name) { alert('Enter a name'); return; }
-    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level, phone, email}) });
+    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level, phone, email, card_type}) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
     await loadAllPlayers();
@@ -243,7 +245,14 @@ async function createTournament() {
     loadSeason();
 }
 
-checkAdmin().then(() => loadSeason());
+checkAdmin().then(() => { loadCardTypes(); loadSeason(); });
+
+async function loadCardTypes() {
+    const res = await fetch('/api/card-types');
+    const types = await res.json();
+    const el = document.getElementById('newPlayerCard');
+    if (el) el.innerHTML = '<option value="">-- Card Type --</option>' + types.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+}
 </script>
 </body>
 </html>

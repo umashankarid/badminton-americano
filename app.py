@@ -67,6 +67,39 @@ def player_view(pid):
 
 
 # --- Player API ---
+@app.route("/api/card-types", methods=["GET"])
+def list_card_types():
+    db = get_db()
+    rows = db.execute("SELECT * FROM card_type ORDER BY name").fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/card-types", methods=["POST"])
+@admin_required
+def add_card_type():
+    data = request.json
+    db = get_db()
+    try:
+        db.execute("INSERT INTO card_type (name) VALUES (?)", (data["name"],))
+        db.commit()
+    except:
+        db.close()
+        return jsonify({"error": "Card type already exists"}), 400
+    db.close()
+    return jsonify({"ok": True}), 201
+
+
+@app.route("/api/card-types/<int:cid>", methods=["DELETE"])
+@admin_required
+def delete_card_type(cid):
+    db = get_db()
+    db.execute("DELETE FROM card_type WHERE id = ?", (cid,))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/players", methods=["GET"])
 def list_players():
     level = request.args.get("level")
@@ -88,8 +121,8 @@ def add_player():
         db.close()
         return jsonify({"error": "Player already exists"}), 400
     try:
-        db.execute("INSERT INTO player (name, level, phone, email) VALUES (?, ?, ?, ?)",
-                   (data["name"], data["level"], data.get("phone", ""), data.get("email", "")))
+        db.execute("INSERT INTO player (name, level, phone, email, card_type) VALUES (?, ?, ?, ?, ?)",
+                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", "")))
         db.commit()
     except Exception as e:
         db.close()
@@ -102,8 +135,8 @@ def add_player():
 def edit_player(pid):
     data = request.json
     db = get_db()
-    db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ? WHERE id = ?",
-               (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), pid))
+    db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
+               (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
     db.commit()
     db.close()
     return jsonify({"ok": True})

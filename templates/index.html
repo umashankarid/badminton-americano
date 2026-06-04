@@ -56,6 +56,7 @@
             <button class="nav-btn orange" onclick="showEditPlayerModal()">✎ Edit Player</button>
             <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
             <button class="nav-btn" style="background:#7b1fa2" onclick="showModal('seasonModal')">📅 Create Season</button>
+            <button class="nav-btn" style="background:#555;font-size:0.9em" onclick="showModal('cardTypeModal')">🎫 Card Types</button>
         </div>
         <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
@@ -139,6 +140,7 @@
             <option value="B">Level B</option>
             <option value="C">Level C</option>
         </select>
+        <select id="playerCardType"></select>
         <button onclick="savePlayer()">Save</button>
     </div>
 </div>
@@ -197,6 +199,19 @@
     </div>
 </div>
 
+<!-- Card Types Modal -->
+<div id="cardTypeModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('cardTypeModal')">&times;</span>
+        <h2>Manage Card Types</h2>
+        <div id="cardTypeList" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+            <input type="text" id="newCardType" placeholder="New card type name" style="flex:1">
+            <button onclick="addCardType()">Add</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let isAdmin = false;
 
@@ -208,7 +223,34 @@ async function checkAdmin() {
     document.getElementById('adminStatus').textContent = isAdmin ? '✓ Admin' : '';
     document.getElementById('adminBtn').textContent = isAdmin ? '🔓 Logout' : '🔒 Admin Login';
     document.getElementById('adminBtn').onclick = isAdmin ? adminLogout : () => showModal('loginModal');
+    loadCardTypes();
     loadSeasons();
+}
+
+async function loadCardTypes() {
+    const res = await fetch('/api/card-types');
+    const types = await res.json();
+    const html = '<option value="">-- Select Card Type --</option>' + types.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+    document.getElementById('playerCardType').innerHTML = html;
+    document.getElementById('cardTypeList').innerHTML = types.map(t =>
+        `<div style="display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee"><span>${t.name}</span><button class="edit-btn" style="color:#c62828" onclick="deleteCardType(${t.id})">✕</button></div>`
+    ).join('') || '<p style="color:#888">No card types</p>';
+}
+
+async function addCardType() {
+    const name = document.getElementById('newCardType').value.trim();
+    if (!name) return;
+    const res = await fetch('/api/card-types', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('newCardType').value = '';
+    loadCardTypes();
+}
+
+async function deleteCardType(id) {
+    if (!confirm('Delete this card type?')) return;
+    await fetch(`/api/card-types/${id}`, { method: 'DELETE' });
+    loadCardTypes();
 }
 
 async function adminLogin() {
@@ -256,7 +298,6 @@ function filterEditPlayerList() {
 
 function editPlayer(id, name, level) {
     hideModal('editPlayerModal');
-    // Fetch full player data
     fetch(`/api/players`).then(r => r.json()).then(players => {
         const p = players.find(x => x.id === id);
         document.getElementById('editPlayerId').value = id;
@@ -264,6 +305,7 @@ function editPlayer(id, name, level) {
         document.getElementById('playerPhone').value = p.phone || '';
         document.getElementById('playerEmail').value = p.email || '';
         document.getElementById('playerLevel').value = p.level;
+        document.getElementById('playerCardType').value = p.card_type || '';
         document.getElementById('playerModalTitle').textContent = 'Edit Player';
         showModal('playerModal');
     });
@@ -279,7 +321,7 @@ async function deletePlayer(id, name) {
 
 async function savePlayer() {
     const id = document.getElementById('editPlayerId').value;
-    const data = { name: document.getElementById('playerName').value, level: document.getElementById('playerLevel').value, phone: document.getElementById('playerPhone').value, email: document.getElementById('playerEmail').value };
+    const data = { name: document.getElementById('playerName').value, level: document.getElementById('playerLevel').value, phone: document.getElementById('playerPhone').value, email: document.getElementById('playerEmail').value, card_type: document.getElementById('playerCardType').value };
     if (id) {
         await fetch(`/api/players/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     } else {

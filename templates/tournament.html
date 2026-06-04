@@ -127,6 +127,7 @@
                         <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Player Name</label><input type="text" id="newPlayerName" placeholder="Name" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></div>
                         <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Phone</label><input type="tel" id="newPlayerPhone" placeholder="Phone" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></div>
                         <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Email</label><input type="email" id="newPlayerEmail" placeholder="Email" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></div>
+                        <div><label style="font-size:0.8em;color:#666">Card Type</label><select id="newPlayerCard" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></select></div>
                         <div><label style="font-size:0.8em;color:#666">Player Level</label><select id="newPlayerLevel" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px">
                             <option value="C">C - Beginner</option><option value="B">B - Intermediate</option><option value="A">A - Advanced</option><option value="C">Not sure</option>
                         </select></div>
@@ -420,8 +421,9 @@ async function addAndJoin() {
     const level = document.getElementById('newPlayerLevel').value;
     const phone = document.getElementById('newPlayerPhone').value.trim();
     const email = document.getElementById('newPlayerEmail').value.trim();
+    const card_type = document.getElementById('newPlayerCard').value;
     if (!name) { alert('Enter a name'); return; }
-    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level, phone, email}) });
+    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level, phone, email, card_type}) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
     // Reload players and join the new one
@@ -477,7 +479,14 @@ async function saveTournamentEdit() {
     loadTournament();
 }
 
-checkAdmin().then(() => loadTournament());
+checkAdmin().then(() => { loadCardTypes(); loadTournament(); });
+
+async function loadCardTypes() {
+    const res = await fetch('/api/card-types');
+    const types = await res.json();
+    const el = document.getElementById('newPlayerCard');
+    if (el) el.innerHTML = '<option value="">-- Card Type --</option>' + types.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+}
 </script>
 </body>
 </html>
