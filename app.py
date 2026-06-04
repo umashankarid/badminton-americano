@@ -120,6 +120,7 @@ def delete_player(pid):
         db.close()
         return jsonify({"error": f"Cannot delete: player is in active tournament '{active['name']}'"}), 400
     db.execute("DELETE FROM tournament_player WHERE player_id = ?", (pid,))
+    db.execute("DELETE FROM season_player WHERE player_id = ?", (pid,))
     db.execute("DELETE FROM player WHERE id = ?", (pid,))
     db.commit()
     db.close()
