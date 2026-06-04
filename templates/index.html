@@ -47,12 +47,16 @@
     <h1>🏸 Komet Badminton Americano</h1>
 
     <div class="card">
+        <div id="adminBar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px">
+            <span id="adminStatus" style="font-size:0.85em;color:#888"></span>
+            <button id="adminBtn" onclick="showModal('loginModal')" style="padding:6px 12px;font-size:0.85em;background:#555">🔒 Admin Login</button>
+        </div>
         <div class="grid">
             <button class="nav-btn" onclick="showModal('playerModal')">➕ Add Player</button>
             <button class="nav-btn orange" onclick="showEditPlayerModal()">✎ Edit Player</button>
-            <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
+            <button class="nav-btn green admin-only" onclick="editingTournamentId=null;showModal('tournamentModal')" style="display:none">🏆 Create Tournament</button>
         </div>
-        <div class="grid" style="margin-top:12px">
+        <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
             <button class="nav-btn" style="background:#555;font-size:0.9em" onclick="document.getElementById('dbUpload').click()">⬆ Upload Data</button>
             <input type="file" id="dbUpload" accept=".db" style="display:none" onchange="uploadDb(this)">
@@ -62,6 +66,16 @@
     <div class="card">
         <h2>Tournaments</h2>
         <div id="tournamentList"></div>
+    </div>
+</div>
+
+<!-- Admin Login Modal -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('loginModal')">&times;</span>
+        <h2>Admin Login</h2>
+        <input type="password" id="adminPassword" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button onclick="adminLogin()">Login</button>
     </div>
 </div>
 
@@ -117,6 +131,34 @@
 </div>
 
 <script>
+let isAdmin = false;
+
+async function checkAdmin() {
+    const res = await fetch('/api/admin/status');
+    const data = await res.json();
+    isAdmin = data.admin;
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+    document.getElementById('adminStatus').textContent = isAdmin ? '✓ Admin' : '';
+    document.getElementById('adminBtn').textContent = isAdmin ? '🔓 Logout' : '🔒 Admin Login';
+    document.getElementById('adminBtn').onclick = isAdmin ? adminLogout : () => showModal('loginModal');
+}
+
+async function adminLogin() {
+    const pw = document.getElementById('adminPassword').value;
+    const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('adminPassword').value = '';
+    hideModal('loginModal');
+    checkAdmin();
+}
+
+async function adminLogout() {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    checkAdmin();
+    loadTournaments();
+}
+
 function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } }
 function hideModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -232,10 +274,10 @@ async function loadTournaments() {
     const tournaments = await res.json();
     document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
         const slug = t.name.toLowerCase().replace(/ /g, '-');
+        const adminBtns = isAdmin ? `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
+         <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>` : '';
         return `<div class="tournament-item"><a href="/tournament/${slug}">${t.name}</a>
-         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}</span>
-         ${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
-         <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button></span></div>`;
+         <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}</span>${adminBtns}</span></div>`;
     }).join('') || '<p style="color:#888">No tournaments yet</p>';
 }
 
@@ -280,6 +322,7 @@ async function uploadDb(input) {
 }
 
 loadTournaments();
+checkAdmin();
 </script>
 </body>
 </html>

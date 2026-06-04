@@ -1,9 +1,22 @@
 """Flask application for Badminton Americano tournament."""
-from flask import Flask, request, jsonify, render_template, send_file
+import os
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, send_file, session
 from models import get_db, init_db, DB_PATH
 from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "komet-badminton-2026")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "komet2026")
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("admin"):
+            return jsonify({"error": "Admin login required"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 
 @app.before_request
@@ -15,6 +28,27 @@ def before_request():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# --- Auth API ---
+@app.route("/api/admin/login", methods=["POST"])
+def admin_login():
+    data = request.json
+    if data.get("password") == ADMIN_PASSWORD:
+        session["admin"] = True
+        return jsonify({"ok": True})
+    return jsonify({"error": "Wrong password"}), 401
+
+
+@app.route("/api/admin/logout", methods=["POST"])
+def admin_logout():
+    session.pop("admin", None)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/status")
+def admin_status():
+    return jsonify({"admin": session.get("admin", False)})
 
 
 @app.route("/tournament/<slug>")
@@ -146,6 +180,7 @@ def list_tournaments():
 
 
 @app.route("/api/tournaments", methods=["POST"])
+@admin_required
 def create_tournament():
     data = request.json
     db = get_db()
@@ -166,6 +201,7 @@ def create_tournament():
 
 
 @app.route("/api/tournaments/<int:tid>", methods=["PUT"])
+@admin_required
 def edit_tournament(tid):
     data = request.json
     db = get_db()
@@ -187,7 +223,42 @@ def edit_tournament(tid):
     return jsonify({"ok": True})
 
 
+@app.route("/api/tournaments/<int:tid>/join", methods=["POST"])
+def join_tournament(tid):
+    data = request.json
+    pid = data["player_id"]
+    db = get_db()
+    t = db.execute("SELECT * FROM tournament WHERE id = ?", (tid,)).fetchone()
+    if t["current_round"] > 0:
+        db.close()
+        return jsonify({"error": "Tournament already started"}), 400
+    existing = db.execute("SELECT 1 FROM tournament_player WHERE tournament_id = ? AND player_id = ?", (tid, pid)).fetchone()
+    if existing:
+        db.close()
+        return jsonify({"error": "Already in this tournament"}), 400
+    db.execute("INSERT INTO tournament_player (tournament_id, player_id) VALUES (?, ?)", (tid, pid))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/tournaments/<int:tid>/leave", methods=["POST"])
+def leave_tournament(tid):
+    data = request.json
+    pid = data["player_id"]
+    db = get_db()
+    t = db.execute("SELECT * FROM tournament WHERE id = ?", (tid,)).fetchone()
+    if t["current_round"] > 0:
+        db.close()
+        return jsonify({"error": "Tournament already started"}), 400
+    db.execute("DELETE FROM tournament_player WHERE tournament_id = ? AND player_id = ?", (tid, pid))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/tournaments/<int:tid>", methods=["DELETE"])
+@admin_required
 def delete_tournament(tid):
     db = get_db()
     db.execute("DELETE FROM match WHERE tournament_id = ?", (tid,))
@@ -223,6 +294,7 @@ def get_tournament(tid):
 
 
 @app.route("/api/tournaments/<int:tid>/next-round", methods=["POST"])
+@admin_required
 def generate_next_round(tid):
     db = get_db()
     t = db.execute("SELECT * FROM tournament WHERE id = ?", (tid,)).fetchone()
@@ -273,6 +345,7 @@ def generate_next_round(tid):
 
 
 @app.route("/api/matches/<int:mid>/score", methods=["POST"])
+@admin_required
 def record_score(mid):
     data = request.json
     score_a, score_b = data["score_a"], data["score_b"]
@@ -327,6 +400,7 @@ def download_db():
 
 
 @app.route("/api/db/upload", methods=["POST"])
+@admin_required
 def upload_db():
     f = request.files.get("file")
     if not f:
