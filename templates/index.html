@@ -65,9 +65,13 @@
     </div>
 
     <div class="card">
-        <h2 id="tournamentListTitle">Tournaments</h2>
+        <h2>Seasons</h2>
         <div id="seasonList"></div>
-        <div id="tournamentList" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+        <h2 id="tournamentListTitle">Tournaments</h2>
+        <div id="tournamentList"></div>
     </div>
 
     <div class="card">
@@ -367,19 +371,24 @@ async function deleteSeason(id) {
 async function loadTournaments() {
     const res = await fetch('/api/tournaments');
     let tournaments = await res.json();
+    const sRes = await fetch('/api/seasons');
+    const seasons = await sRes.json();
+    const seasonMap = {};
+    seasons.forEach(s => seasonMap[s.id] = s.name);
+
     if (!isAdmin) {
-        tournaments = tournaments.filter(t => t.current_round === 0 && !t.season_id);
+        tournaments = tournaments.filter(t => t.current_round === 0);
         document.getElementById('tournamentListTitle').textContent = 'Tournaments Open for Registration';
     } else {
-        tournaments = tournaments.filter(t => !t.season_id);
-        document.getElementById('tournamentListTitle').textContent = 'Standalone Tournaments';
+        document.getElementById('tournamentListTitle').textContent = 'Tournaments';
     }
     document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
         const slug = t.name.toLowerCase().replace(/ /g, '-');
+        const seasonTag = t.season_id && seasonMap[t.season_id] ? `<span style="font-size:0.8em;background:#f3e5f5;color:#7b1fa2;padding:2px 6px;border-radius:4px">${seasonMap[t.season_id]}</span> ` : '';
         if (!isAdmin) {
             const dateStr = t.date || 'TBD';
             return `<div class="tournament-item" style="flex-wrap:wrap;gap:8px">
-                <div><a href="/tournament/${slug}" style="font-weight:600;font-size:1.05em">${t.name}</a>
+                <div>${seasonTag}<a href="/tournament/${slug}" style="font-weight:600;font-size:1.05em">${t.name}</a>
                 <div style="font-size:0.85em;color:#666">${t.level} · ${dateStr}</div></div>
                 <a href="/tournament/${slug}" style="font-size:0.85em;color:#1a73e8">View Players →</a>
             </div>`;
@@ -387,7 +396,7 @@ async function loadTournaments() {
         const adminBtns = `${t.current_round === 0 ? `<button class="edit-btn" style="margin-left:8px" onclick="editTournament(${t.id})">✎</button>` : ''}
          <button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteTournament(${t.id},'${t.status}')">✕</button>`;
         const dateStr = t.date ? ` · ${t.date}` : '';
-        return `<div class="tournament-item"><a href="/tournament/${slug}">${t.name}</a>
+        return `<div class="tournament-item"><div>${seasonTag}<a href="/tournament/${slug}">${t.name}</a></div>
          <span><span class="status-${t.status}">${t.status} · Round ${t.current_round} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
     }).join('') || '<p style="color:#888">No tournaments available</p>';
 }
