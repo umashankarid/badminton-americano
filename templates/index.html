@@ -57,6 +57,7 @@
             <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
             <button class="nav-btn" style="background:#7b1fa2" onclick="showModal('seasonModal')">📅 Create Season</button>
             <button class="nav-btn" style="background:#555;font-size:0.9em" onclick="showModal('cardTypeModal')">🎫 Card Types</button>
+            <button class="nav-btn" style="background:#37474f;font-size:0.9em" onclick="showModal('viewPlayersModal')">👥 View Players</button>
         </div>
         <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
@@ -212,6 +213,20 @@
     </div>
 </div>
 
+<!-- View Players Modal -->
+<div id="viewPlayersModal" class="modal">
+    <div class="modal-content" style="max-width:700px">
+        <span class="close" onclick="hideModal('viewPlayersModal')">&times;</span>
+        <h2>All Players</h2>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="vpSearch" placeholder="Search..." oninput="filterViewPlayers()" style="flex:1">
+            <select id="vpCardFilter" onchange="filterViewPlayers()"><option value="">All Card Types</option></select>
+        </div>
+        <div id="vpCount" style="font-size:0.85em;color:#666;margin-bottom:8px"></div>
+        <div id="vpList" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+</div>
+
 <script>
 let isAdmin = false;
 
@@ -253,6 +268,32 @@ async function deleteCardType(id) {
     loadCardTypes();
 }
 
+let allViewPlayers = [];
+
+async function loadViewPlayers() {
+    const res = await fetch('/api/players');
+    allViewPlayers = await res.json();
+    // Populate card type filter
+    const types = [...new Set(allViewPlayers.map(p => p.card_type).filter(Boolean))];
+    document.getElementById('vpCardFilter').innerHTML = '<option value="">All Card Types</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
+    filterViewPlayers();
+}
+
+function filterViewPlayers() {
+    const q = document.getElementById('vpSearch').value.toLowerCase();
+    const cardFilter = document.getElementById('vpCardFilter').value;
+    let filtered = allViewPlayers;
+    if (q) filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+    if (cardFilter) filtered = filtered.filter(p => p.card_type === cardFilter);
+    document.getElementById('vpCount').textContent = `${filtered.length} players`;
+    document.getElementById('vpList').innerHTML = filtered.map(p =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #eee">
+            <div><strong>${p.name}</strong> <span class="badge badge-${p.level}">${p.level}</span> ${p.card_type ? `<span style="font-size:0.8em;background:#e3f2fd;padding:2px 6px;border-radius:4px">${p.card_type}</span>` : ''}</div>
+            <div style="font-size:0.8em;color:#666">${p.phone || ''} ${p.email ? '· ' + p.email : ''}</div>
+        </div>`
+    ).join('') || '<p style="color:#888">No players found</p>';
+}
+
 async function adminLogin() {
     const pw = document.getElementById('adminPassword').value;
     const res = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
@@ -269,7 +310,7 @@ async function adminLogout() {
     loadTournaments();
 }
 
-function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } }
+function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } if(id==='viewPlayersModal') loadViewPlayers(); }
 function hideModal(id) { document.getElementById(id).style.display = 'none'; }
 
 async function loadPlayers() {

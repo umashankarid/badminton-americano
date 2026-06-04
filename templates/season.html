@@ -159,7 +159,7 @@ async function loadSeason() {
 
     // Registered players
     document.getElementById('playerList').innerHTML = seasonData.players.map(p =>
-        `<span class="player-tag">${p.name}<span class="remove" onclick="leavePlayer(${p.id})">✕</span></span>`
+        `<span class="player-tag">${p.name}${p.card_type ? ' <span style="font-size:0.75em;color:#1565c0">(' + p.card_type + ')</span>' : ''}<span class="remove" onclick="leavePlayer(${p.id})">✕</span></span>`
     ).join('') || '<p style="color:#888">No players registered yet</p>';
 
     // Tournaments

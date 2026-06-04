@@ -318,7 +318,7 @@ def get_tournament_by_slug(slug):
         db.close()
         return jsonify({"error": "Tournament not found"}), 404
     players = db.execute(
-        """SELECT p.id, p.name, p.level, tp.points as tournament_points, tp.sit_outs
+        """SELECT p.id, p.name, p.level, p.card_type, tp.points as tournament_points, tp.sit_outs
            FROM tournament_player tp JOIN player p ON tp.player_id = p.id
            WHERE tp.tournament_id = ? ORDER BY tp.points DESC""", (t["id"],)
     ).fetchall()
@@ -440,7 +440,7 @@ def get_tournament(tid):
     db = get_db()
     t = dict(db.execute("SELECT * FROM tournament WHERE id = ?", (tid,)).fetchone())
     players = db.execute(
-        """SELECT p.id, p.name, p.level, tp.points as tournament_points, tp.sit_outs
+        """SELECT p.id, p.name, p.level, p.card_type, tp.points as tournament_points, tp.sit_outs
            FROM tournament_player tp JOIN player p ON tp.player_id = p.id
            WHERE tp.tournament_id = ? ORDER BY tp.points DESC""", (tid,)
     ).fetchall()

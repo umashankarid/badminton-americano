@@ -204,7 +204,8 @@ async function loadTournament() {
     // Standings (always visible)
     const standingsHtml = t.players.map((p, i) => {
         const leaveBtn = t.current_round === 0 ? `<button style="padding:2px 8px;font-size:0.75em;background:#c62828;color:white;border:none;border-radius:4px;cursor:pointer" onclick="leaveTournament(${p.id})">Leave</button>` : '';
-        return `<tr><td class="rank">${i+1}</td><td><a href="/player/${p.id}" style="color:#333;text-decoration:none">${p.name}</a> ${leaveBtn}</td><td>${p.tournament_points}</td></tr>`;
+        const cardTag = p.card_type ? `<span style="font-size:0.7em;background:#e3f2fd;padding:1px 4px;border-radius:3px">${p.card_type}</span>` : '';
+        return `<tr><td class="rank">${i+1}</td><td><a href="/player/${p.id}" style="color:#333;text-decoration:none">${p.name}</a> ${cardTag} ${leaveBtn}</td><td>${p.tournament_points}</td></tr>`;
     }).join('');
     document.getElementById('standings').innerHTML = standingsHtml;
 
