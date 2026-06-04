@@ -243,10 +243,6 @@ function updatePlayerCount() {
 async function createTournament() {
     const checkboxes = document.querySelectorAll('#tPlayerList input:checked');
     const player_ids = Array.from(checkboxes).map(c => parseInt(c.value));
-    if (player_ids.length < 4) {
-        alert('Select at least 4 players');
-        return;
-    }
     const data = {
         name: document.getElementById('tName').value,
         level: document.getElementById('tLevel').value,

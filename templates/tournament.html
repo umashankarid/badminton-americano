@@ -287,6 +287,7 @@ async function submitScoreValues(mid, score_a, score_b) {
 async function nextRound() {
     const res = await fetch(`/api/tournaments/${TID}/next-round`, { method: 'POST' });
     const result = await res.json();
+    if (result.error) { alert(result.error); return; }
     if (result.finished) {
         loadTournament();
         return;
@@ -346,10 +347,6 @@ function filterEditPlayers() {
 async function saveTournamentEdit() {
     const checkboxes = document.querySelectorAll('#etPlayerList input:checked');
     const player_ids = Array.from(checkboxes).map(c => parseInt(c.value));
-    if (player_ids.length < 4) {
-        alert('Select at least 4 players');
-        return;
-    }
     const data = {
         name: document.getElementById('etName').value,
         level: document.getElementById('etLevel').value,

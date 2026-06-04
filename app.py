@@ -193,7 +193,7 @@ def create_tournament():
         (data["name"], data["level"], data["max_points"], data["courts"])
     )
     tid = cur.lastrowid
-    for pid in data["player_ids"]:
+    for pid in data.get("player_ids", []):
         db.execute("INSERT INTO tournament_player (tournament_id, player_id) VALUES (?, ?)", (tid, pid))
     db.commit()
     db.close()
@@ -304,6 +304,10 @@ def generate_next_round(tid):
 
     player_rows = db.execute("SELECT player_id FROM tournament_player WHERE tournament_id = ?", (tid,)).fetchall()
     player_ids = [r["player_id"] for r in player_rows]
+
+    if len(player_ids) < 4:
+        db.close()
+        return jsonify({"error": "Need at least 4 players to start"}), 400
 
     used_pairs = get_used_pairs(db, tid)
     player_points = get_tournament_points(db, tid)
