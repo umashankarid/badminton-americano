@@ -179,8 +179,11 @@ async function loadTournament() {
         document.getElementById('joinCard').style.display = 'block';
         if (t.season_id) {
             document.getElementById('addAllSeasonBtn').style.display = '';
+            document.getElementById('addNewPlayer').style.display = 'none';
+            window._isSeasonTournament = true;
         } else {
             document.getElementById('addAllSeasonBtn').style.display = 'none';
+            window._isSeasonTournament = false;
         }
         loadJoinPlayers(t.players.map(p => p.id), t.season_id);
     } else {
@@ -352,9 +355,9 @@ function renderJoinPlayers(query) {
             <button onclick="joinTournament(${p.id})" style="padding:4px 12px;font-size:0.85em;background:#34a853">Join</button>
         </div>`
     ).join('') || '<p style="color:#888;padding:6px">No matching players</p>';
-    // Show add-new if search has text and no exact match
+    // Show add-new if search has text and no exact match (only for non-season tournaments)
     const exactMatch = q && allPlayers.some(p => p.name.toLowerCase() === q);
-    document.getElementById('addNewPlayer').style.display = (q && !exactMatch) ? 'block' : 'none';
+    document.getElementById('addNewPlayer').style.display = (q && !exactMatch && !window._isSeasonTournament) ? 'block' : 'none';
     document.getElementById('newPlayerName').value = query;
 }
 
