@@ -206,9 +206,11 @@ async function loadTournament() {
             document.getElementById('addAllSeasonBtn').style.display = '';
             document.getElementById('addNewPlayer').style.display = 'none';
             window._isSeasonTournament = true;
+            window._seasonId = t.season_id;
         } else {
             document.getElementById('addAllSeasonBtn').style.display = 'none';
             window._isSeasonTournament = false;
+            window._seasonId = null;
         }
         loadJoinPlayers(t.players.map(p => p.id), t.season_id);
     } else {
@@ -374,12 +376,16 @@ function renderJoinPlayers(query) {
     const q = query.toLowerCase();
     const available = allPlayers.filter(p => !tournamentPlayerIds.includes(p.id));
     const filtered = q ? available.filter(p => p.name.toLowerCase().includes(q)) : available;
-    document.getElementById('joinPlayerList').innerHTML = filtered.map(p =>
-        `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid #eee">
-            <span>${p.name}</span>
-            <button onclick="joinTournament(${p.id})" style="padding:4px 12px;font-size:0.85em;background:#34a853">Join</button>
-        </div>`
-    ).join('') || '<p style="color:#888;padding:6px">No matching players</p>';
+    if (window._isSeasonTournament && q && filtered.length === 0) {
+        document.getElementById('joinPlayerList').innerHTML = `<p style="color:#e65100;padding:8px;background:#fff3e0;border-radius:6px">⚠️ Player not found in this season. Please <a href="/season/${window._seasonId}" style="color:#1a73e8;font-weight:600">register in the season first</a>, then come back to join this tournament.</p>`;
+    } else {
+        document.getElementById('joinPlayerList').innerHTML = filtered.map(p =>
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid #eee">
+                <span>${p.name}</span>
+                <button onclick="joinTournament(${p.id})" style="padding:4px 12px;font-size:0.85em;background:#34a853">Join</button>
+            </div>`
+        ).join('') || '<p style="color:#888;padding:6px">No matching players</p>';
+    }
     // Show add-new if search has text and no exact match (only for non-season tournaments)
     const exactMatch = q && allPlayers.some(p => p.name.toLowerCase() === q);
     document.getElementById('addNewPlayer').style.display = (q && !exactMatch && !window._isSeasonTournament) ? 'block' : 'none';
