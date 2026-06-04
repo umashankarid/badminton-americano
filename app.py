@@ -9,6 +9,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "komet-badminton-2026")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "komet2026")
 
+# Initialize DB once at import
+init_db()
+
 
 def admin_required(f):
     @wraps(f)
@@ -17,11 +20,6 @@ def admin_required(f):
             return jsonify({"error": "Admin login required"}), 401
         return f(*args, **kwargs)
     return decorated
-
-
-@app.before_request
-def before_request():
-    init_db()
 
 
 # --- Pages ---
@@ -154,6 +152,7 @@ def delete_player(pid):
     if active:
         db.close()
         return jsonify({"error": f"Cannot delete: player is in active tournament '{active['name']}'"}), 400
+    db.execute("DELETE FROM match WHERE player_a1 = ? OR player_a2 = ? OR player_b1 = ? OR player_b2 = ?", (pid, pid, pid, pid))
     db.execute("DELETE FROM tournament_player WHERE player_id = ?", (pid,))
     db.execute("DELETE FROM season_player WHERE player_id = ?", (pid,))
     db.execute("DELETE FROM player WHERE id = ?", (pid,))
