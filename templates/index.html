@@ -55,6 +55,7 @@
             <button class="nav-btn" onclick="showModal('playerModal')">➕ Add Player</button>
             <button class="nav-btn orange" onclick="showEditPlayerModal()">✎ Edit Player</button>
             <button class="nav-btn green" onclick="editingTournamentId=null;showModal('tournamentModal')">🏆 Create Tournament</button>
+            <button class="nav-btn" style="background:#7b1fa2" onclick="showModal('seasonModal')">📅 Create Season</button>
         </div>
         <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
@@ -65,7 +66,8 @@
 
     <div class="card">
         <h2 id="tournamentListTitle">Tournaments</h2>
-        <div id="tournamentList"></div>
+        <div id="seasonList"></div>
+        <div id="tournamentList" style="margin-top:12px"></div>
     </div>
 
     <div class="card">
@@ -172,6 +174,17 @@
     </div>
 </div>
 
+<!-- Create Season Modal -->
+<div id="seasonModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('seasonModal')">&times;</span>
+        <h2>Create Season</h2>
+        <input type="text" id="sName" placeholder="Season name (e.g. Summer Tournaments 2026)">
+        <input type="text" id="sDesc" placeholder="Description (optional)">
+        <button onclick="createSeason()">Create Season</button>
+    </div>
+</div>
+
 <script>
 let isAdmin = false;
 
@@ -183,6 +196,7 @@ async function checkAdmin() {
     document.getElementById('adminStatus').textContent = isAdmin ? '✓ Admin' : '';
     document.getElementById('adminBtn').textContent = isAdmin ? '🔓 Logout' : '🔒 Admin Login';
     document.getElementById('adminBtn').onclick = isAdmin ? adminLogout : () => showModal('loginModal');
+    loadSeasons();
 }
 
 async function adminLogin() {
@@ -316,14 +330,49 @@ async function createTournament() {
     if (result.id) { const slug = data.name.toLowerCase().replace(/ /g, '-'); window.location.href = `/tournament/${slug}`; }
 }
 
+async function loadSeasons() {
+    const res = await fetch('/api/seasons');
+    const seasons = await res.json();
+    if (seasons.length === 0) {
+        document.getElementById('seasonList').innerHTML = '';
+        return;
+    }
+    document.getElementById('seasonList').innerHTML = seasons.map(s => {
+        const adminBtns = isAdmin ? `<button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteSeason(${s.id})">✕</button>` : '';
+        return `<div class="tournament-item" style="background:#f3e5f5;border-color:#ce93d8">
+            <a href="/season/${s.id}" style="font-weight:600;color:#7b1fa2">${s.name}</a>
+            <span><span class="status-${s.status}">${s.status}</span>${adminBtns}</span>
+        </div>`;
+    }).join('');
+}
+
+async function createSeason() {
+    const data = { name: document.getElementById('sName').value, description: document.getElementById('sDesc').value };
+    if (!data.name) { alert('Enter season name'); return; }
+    const res = await fetch('/api/seasons', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('sName').value = '';
+    document.getElementById('sDesc').value = '';
+    hideModal('seasonModal');
+    loadSeasons();
+}
+
+async function deleteSeason(id) {
+    if (!confirm('Delete this season? Tournaments will be unlinked but not deleted.')) return;
+    await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
+    loadSeasons();
+}
+
 async function loadTournaments() {
     const res = await fetch('/api/tournaments');
     let tournaments = await res.json();
     if (!isAdmin) {
-        tournaments = tournaments.filter(t => t.current_round === 0);
+        tournaments = tournaments.filter(t => t.current_round === 0 && !t.season_id);
         document.getElementById('tournamentListTitle').textContent = 'Tournaments Open for Registration';
     } else {
-        document.getElementById('tournamentListTitle').textContent = 'Tournaments';
+        tournaments = tournaments.filter(t => !t.season_id);
+        document.getElementById('tournamentListTitle').textContent = 'Standalone Tournaments';
     }
     document.getElementById('tournamentList').innerHTML = tournaments.map(t => {
         const slug = t.name.toLowerCase().replace(/ /g, '-');

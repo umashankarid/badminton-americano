@@ -22,6 +22,21 @@ def init_db():
             points INTEGER NOT NULL DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS season (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'finished'))
+        );
+
+        CREATE TABLE IF NOT EXISTS season_player (
+            season_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            PRIMARY KEY (season_id, player_id),
+            FOREIGN KEY (season_id) REFERENCES season(id),
+            FOREIGN KEY (player_id) REFERENCES player(id)
+        );
+
         CREATE TABLE IF NOT EXISTS tournament (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -29,8 +44,10 @@ def init_db():
             max_points INTEGER NOT NULL DEFAULT 15,
             courts INTEGER NOT NULL DEFAULT 1,
             date TEXT,
+            season_id INTEGER,
             status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'finished')),
-            current_round INTEGER NOT NULL DEFAULT 0
+            current_round INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (season_id) REFERENCES season(id)
         );
 
         CREATE TABLE IF NOT EXISTS tournament_player (

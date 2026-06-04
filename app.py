@@ -56,6 +56,11 @@ def tournament_view(slug):
     return render_template("tournament.html", tournament_slug=slug)
 
 
+@app.route("/season/<int:sid>")
+def season_view(sid):
+    return render_template("season.html", season_id=sid)
+
+
 @app.route("/player/<int:pid>")
 def player_view(pid):
     return render_template("player.html", player_id=pid)
@@ -158,6 +163,89 @@ def slugify(name):
     return name.lower().replace(" ", "-")
 
 
+# --- Season API ---
+@app.route("/api/seasons", methods=["GET"])
+def list_seasons():
+    db = get_db()
+    rows = db.execute("SELECT * FROM season ORDER BY id DESC").fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/seasons", methods=["POST"])
+@admin_required
+def create_season():
+    data = request.json
+    db = get_db()
+    existing = db.execute("SELECT id FROM season WHERE name = ?", (data["name"],)).fetchone()
+    if existing:
+        db.close()
+        return jsonify({"error": "Season with this name already exists"}), 400
+    cur = db.execute("INSERT INTO season (name, description) VALUES (?, ?)", (data["name"], data.get("description", "")))
+    db.commit()
+    db.close()
+    return jsonify({"id": cur.lastrowid}), 201
+
+
+@app.route("/api/seasons/<int:sid>", methods=["GET"])
+def get_season(sid):
+    db = get_db()
+    s = db.execute("SELECT * FROM season WHERE id = ?", (sid,)).fetchone()
+    if not s:
+        db.close()
+        return jsonify({"error": "Season not found"}), 404
+    s = dict(s)
+    players = db.execute(
+        "SELECT p.* FROM season_player sp JOIN player p ON sp.player_id = p.id WHERE sp.season_id = ? ORDER BY p.name",
+        (sid,)
+    ).fetchall()
+    s["players"] = [dict(r) for r in players]
+    tournaments = db.execute(
+        "SELECT * FROM tournament WHERE season_id = ? ORDER BY date, id", (sid,)
+    ).fetchall()
+    s["tournaments"] = [dict(r) for r in tournaments]
+    db.close()
+    return jsonify(s)
+
+
+@app.route("/api/seasons/<int:sid>", methods=["DELETE"])
+@admin_required
+def delete_season(sid):
+    db = get_db()
+    db.execute("DELETE FROM season_player WHERE season_id = ?", (sid,))
+    db.execute("UPDATE tournament SET season_id = NULL WHERE season_id = ?", (sid,))
+    db.execute("DELETE FROM season WHERE id = ?", (sid,))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/seasons/<int:sid>/join", methods=["POST"])
+def join_season(sid):
+    data = request.json
+    pid = data["player_id"]
+    db = get_db()
+    existing = db.execute("SELECT 1 FROM season_player WHERE season_id = ? AND player_id = ?", (sid, pid)).fetchone()
+    if existing:
+        db.close()
+        return jsonify({"error": "Already registered for this season"}), 400
+    db.execute("INSERT INTO season_player (season_id, player_id) VALUES (?, ?)", (sid, pid))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/seasons/<int:sid>/leave", methods=["POST"])
+def leave_season(sid):
+    data = request.json
+    pid = data["player_id"]
+    db = get_db()
+    db.execute("DELETE FROM season_player WHERE season_id = ? AND player_id = ?", (sid, pid))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/tournaments/by-slug/<slug>", methods=["GET"])
 def get_tournament_by_slug(slug):
     db = get_db()
@@ -208,8 +296,8 @@ def create_tournament():
         db.close()
         return jsonify({"error": "Tournament with this name already exists"}), 400
     cur = db.execute(
-        "INSERT INTO tournament (name, level, max_points, courts, date) VALUES (?, ?, ?, ?, ?)",
-        (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"))
+        "INSERT INTO tournament (name, level, max_points, courts, date, season_id) VALUES (?, ?, ?, ?, ?, ?)",
+        (data["name"], data["level"], data["max_points"], data["courts"], data.get("date"), data.get("season_id"))
     )
     tid = cur.lastrowid
     for pid in data.get("player_ids", []):

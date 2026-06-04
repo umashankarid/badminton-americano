@@ -176,7 +176,7 @@ async function loadTournament() {
     // Show join card if not started
     if (t.current_round === 0 && t.status !== 'finished') {
         document.getElementById('joinCard').style.display = 'block';
-        loadJoinPlayers(t.players.map(p => p.id));
+        loadJoinPlayers(t.players.map(p => p.id), t.season_id);
     } else {
         document.getElementById('joinCard').style.display = 'none';
     }
@@ -316,10 +316,17 @@ async function nextRound() {
 let allPlayers = [];
 let tournamentPlayerIds = [];
 
-async function loadJoinPlayers(existingIds) {
+async function loadJoinPlayers(existingIds, seasonId) {
     tournamentPlayerIds = existingIds;
-    const res = await fetch('/api/players');
-    allPlayers = await res.json();
+    let url = '/api/players';
+    if (seasonId) {
+        const sRes = await fetch(`/api/seasons/${seasonId}`);
+        const season = await sRes.json();
+        allPlayers = season.players || [];
+    } else {
+        const res = await fetch(url);
+        allPlayers = await res.json();
+    }
     document.getElementById('joinSearch').value = '';
     renderJoinPlayers('');
 }

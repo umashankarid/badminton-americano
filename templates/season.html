@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Season</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+        h1 { color: #1a73e8; margin-bottom: 4px; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h2 { margin-bottom: 12px; }
+        button { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; }
+        button:hover { background: #1557b0; }
+        .back-link { display: inline-block; margin-bottom: 12px; color: #1a73e8; text-decoration: none; }
+        .tournament-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; }
+        .tournament-item a { color: #1a73e8; text-decoration: none; font-weight: 500; }
+        .player-tag { display: inline-block; padding: 4px 10px; margin: 3px; background: #e3f2fd; border-radius: 16px; font-size: 0.85em; }
+        .player-tag .remove { cursor: pointer; color: #c62828; margin-left: 4px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; margin-bottom: 10px; }
+        .status-active { color: #34a853; }
+        .status-finished { color: #ea8600; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1 id="sName"></h1>
+    <p class="subtitle" id="sDesc"></p>
+
+    <div class="card">
+        <h2>Registered Players (<span id="playerCount">0</span>)</h2>
+        <div id="playerList"></div>
+        <div style="margin-top:12px">
+            <input type="text" id="joinSearch" placeholder="Search player to join..." oninput="filterJoinPlayers()">
+            <div id="joinResults" style="max-height:150px;overflow-y:auto"></div>
+            <div id="addNewPlayer" style="display:none;border-top:1px solid #eee;padding-top:10px;margin-top:8px">
+                <p style="font-size:0.9em;color:#666;margin-bottom:8px">Player not found? Add new:</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+                    <div style="flex:1;min-width:120px"><label style="font-size:0.8em;color:#666">Player Name</label><input type="text" id="newPlayerName" placeholder="Name"></div>
+                    <div><label style="font-size:0.8em;color:#666">Player Level</label><select id="newPlayerLevel"><option value="C">C - Beginner</option><option value="B">B - Intermediate</option><option value="A">A - Advanced</option><option value="C">Not sure</option></select></div>
+                    <button onclick="addAndJoin()">Add & Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card admin-only" style="display:none">
+        <h2>Create Tournament in this Season</h2>
+        <input type="text" id="tName" placeholder="Tournament name (e.g. Week 1 Tuesday)">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Date</label>
+        <input type="date" id="tDate" onclick="this.showPicker()">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Level</label>
+        <select id="tLevel"><option value="No-level">No-level (Mixed)</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
+        <label style="font-weight:500;display:block;margin-bottom:4px">Max Points</label>
+        <input type="number" id="tMaxPoints" value="21" min="1">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Courts</label>
+        <input type="number" id="tCourts" value="2" min="1">
+        <button onclick="createTournament()">Create Tournament</button>
+    </div>
+
+    <div class="card">
+        <h2>Tournaments</h2>
+        <div id="tournamentList"></div>
+    </div>
+</div>
+
+<script>
+const SID = {{ season_id }};
+let isAdmin = false;
+let seasonData = null;
+let allPlayers = [];
+
+async function checkAdmin() {
+    const res = await fetch('/api/admin/status');
+    const data = await res.json();
+    isAdmin = data.admin;
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+}
+
+async function loadSeason() {
+    const res = await fetch(`/api/seasons/${SID}`);
+    seasonData = await res.json();
+    document.getElementById('sName').textContent = seasonData.name;
+    document.title = seasonData.name;
+    document.getElementById('sDesc').textContent = seasonData.description || '';
+    document.getElementById('playerCount').textContent = seasonData.players.length;
+
+    // Registered players
+    document.getElementById('playerList').innerHTML = seasonData.players.map(p =>
+        `<span class="player-tag">${p.name}<span class="remove" onclick="leavePlayer(${p.id})">✕</span></span>`
+    ).join('') || '<p style="color:#888">No players registered yet</p>';
+
+    // Tournaments
+    document.getElementById('tournamentList').innerHTML = seasonData.tournaments.map(t => {
+        const slug = t.name.toLowerCase().replace(/ /g, '-');
+        const dateStr = t.date || 'TBD';
+        const status = t.status === 'finished' ? 'Finished' : (t.current_round > 0 ? `Round ${t.current_round}` : 'Not started');
+        return `<div class="tournament-item">
+            <div><a href="/tournament/${slug}">${t.name}</a><div style="font-size:0.85em;color:#666">${dateStr} · ${t.level}</div></div>
+            <span class="status-${t.status}">${status}</span>
+        </div>`;
+    }).join('') || '<p style="color:#888">No tournaments yet</p>';
+
+    loadAllPlayers();
+}
+
+async function loadAllPlayers() {
+    const res = await fetch('/api/players');
+    allPlayers = await res.json();
+}
+
+function filterJoinPlayers() {
+    const q = document.getElementById('joinSearch').value.toLowerCase();
+    if (!q) { document.getElementById('joinResults').innerHTML = ''; document.getElementById('addNewPlayer').style.display = 'none'; return; }
+    const registered = seasonData.players.map(p => p.id);
+    const filtered = allPlayers.filter(p => !registered.includes(p.id) && p.name.toLowerCase().includes(q));
+    document.getElementById('joinResults').innerHTML = filtered.map(p =>
+        `<div style="display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee">
+            <span>${p.name}</span>
+            <button onclick="joinPlayer(${p.id})" style="padding:4px 12px;font-size:0.85em;background:#34a853">Join</button>
+        </div>`
+    ).join('') || '<p style="color:#888;padding:6px">No matching players</p>';
+    const exactMatch = allPlayers.some(p => p.name.toLowerCase() === q);
+    document.getElementById('addNewPlayer').style.display = (!exactMatch) ? 'block' : 'none';
+    document.getElementById('newPlayerName').value = document.getElementById('joinSearch').value;
+}
+
+async function joinPlayer(pid) {
+    const res = await fetch(`/api/seasons/${SID}/join`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: pid}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('joinSearch').value = '';
+    document.getElementById('joinResults').innerHTML = '';
+    loadSeason();
+}
+
+async function leavePlayer(pid) {
+    if (!confirm('Remove this player from the season?')) return;
+    await fetch(`/api/seasons/${SID}/leave`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: pid}) });
+    loadSeason();
+}
+
+async function addAndJoin() {
+    const name = document.getElementById('newPlayerName').value.trim();
+    const level = document.getElementById('newPlayerLevel').value;
+    if (!name) { alert('Enter a name'); return; }
+    const res = await fetch('/api/players', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, level}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    await loadAllPlayers();
+    const newPlayer = allPlayers.find(p => p.name === name);
+    if (newPlayer) await joinPlayer(newPlayer.id);
+}
+
+async function createTournament() {
+    const data = {
+        name: document.getElementById('tName').value,
+        date: document.getElementById('tDate').value,
+        level: document.getElementById('tLevel').value,
+        max_points: parseInt(document.getElementById('tMaxPoints').value),
+        courts: parseInt(document.getElementById('tCourts').value),
+        season_id: SID,
+        player_ids: []
+    };
+    if (!data.name) { alert('Enter tournament name'); return; }
+    const res = await fetch('/api/tournaments', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    document.getElementById('tName').value = '';
+    loadSeason();
+}
+
+checkAdmin().then(() => loadSeason());
+</script>
+</body>
+</html>
