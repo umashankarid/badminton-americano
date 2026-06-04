@@ -131,10 +131,20 @@ def add_player():
     try:
         db.execute("INSERT INTO player (name, level, phone, email, card_type) VALUES (?, ?, ?, ?, ?)",
                    (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", "")))
-        db.commit()
-    except Exception as e:
-        db.close()
-        return jsonify({"error": str(e)}), 400
+    except Exception:
+        # Fallback for old DB without phone/email/card_type columns
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN phone TEXT")
+        except: pass
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN email TEXT")
+        except: pass
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
+        except: pass
+        db.execute("INSERT INTO player (name, level, phone, email, card_type) VALUES (?, ?, ?, ?, ?)",
+                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", "")))
+    db.commit()
     db.close()
     return jsonify({"ok": True}), 201
 
@@ -143,8 +153,21 @@ def add_player():
 def edit_player(pid):
     data = request.json
     db = get_db()
-    db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
-               (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
+    try:
+        db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
+                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
+    except Exception:
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN phone TEXT")
+        except: pass
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN email TEXT")
+        except: pass
+        try:
+            db.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
+        except: pass
+        db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
+                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
     db.commit()
     db.close()
     return jsonify({"ok": True})
