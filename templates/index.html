@@ -319,7 +319,7 @@ async function loadPlayers() {
     const players = await res.json();
     document.getElementById('editPlayerList').innerHTML = players.map(p =>
         `<div class="player-check" data-name="${p.name.toLowerCase()}" style="justify-content:space-between">
-            <span>${p.name} <span class="badge badge-${p.level}">${p.level}</span></span>
+            <span>${p.name} <span class="badge badge-${p.level}">${p.level}</span> ${p.card_type ? `<span style="font-size:0.8em;background:#e3f2fd;padding:1px 5px;border-radius:3px">${p.card_type}</span>` : ''}</span>
             <span><button class="edit-btn" onclick="editPlayer(${p.id},'${p.name}','${p.level}')">Edit</button> <button class="edit-btn" style="color:#c62828" onclick="deletePlayer(${p.id},'${p.name}')">✕</button></span>
         </div>`
     ).join('');

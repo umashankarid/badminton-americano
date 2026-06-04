@@ -363,6 +363,8 @@ def list_tournaments():
 @admin_required
 def create_tournament():
     data = request.json
+    if not data.get("name", "").strip():
+        return jsonify({"error": "Tournament name is required"}), 400
     db = get_db()
     existing = db.execute("SELECT id FROM tournament WHERE name = ?", (data["name"],)).fetchone()
     if existing:

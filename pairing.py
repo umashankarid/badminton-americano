@@ -85,7 +85,24 @@ def _find_matches(available_pairs, courts, player_points):
     # Sort by balance (prefer more balanced matches)
     candidates.sort(key=lambda x: x[2])
 
-    # Greedily select non-overlapping matches up to court count
+    # Try to fill all courts. Use backtracking if greedy fails.
+    best = _greedy_select(candidates, courts)
+
+    # If greedy didn't fill all courts, try shuffling priorities
+    if len(best) < courts and len(candidates) >= courts:
+        from random import shuffle as rshuffle
+        for _ in range(200):
+            rshuffle(candidates)
+            attempt = _greedy_select(candidates, courts)
+            if len(attempt) > len(best):
+                best = attempt
+            if len(best) == courts:
+                break
+
+    return best if best else None
+
+
+def _greedy_select(candidates, courts):
     matches = []
     used_players = set()
     used_pairs_in_round = set()
@@ -101,8 +118,7 @@ def _find_matches(available_pairs, courts, player_points):
         used_pairs_in_round.add(pair_b)
         if len(matches) == courts:
             break
-
-    return matches if matches else None
+    return matches
 
 
 def get_used_pairs(db, tournament_id):
