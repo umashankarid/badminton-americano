@@ -203,6 +203,7 @@ async function joinPlayer(pid) {
     if (result.error) { alert(result.error); return; }
     document.getElementById('joinSearch').value = '';
     document.getElementById('joinResults').innerHTML = '';
+    alert('✓ Successfully registered!');
     loadSeason();
 }
 

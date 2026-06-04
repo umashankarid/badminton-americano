@@ -6,7 +6,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "americano.db")
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -27,7 +27,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            level TEXT NOT NULL CHECK(level IN ('A', 'B', 'C', 'NA')),
+            level TEXT NOT NULL,
             phone TEXT,
             email TEXT,
             card_type TEXT,
@@ -97,16 +97,32 @@ def init_db():
     conn.commit()
 
     # Migrations for existing databases
+    # First add missing columns
+    for col in ['phone', 'email', 'card_type']:
+        try:
+            conn.execute(f"ALTER TABLE player ADD COLUMN {col} TEXT")
+        except:
+            pass
+
+    # Remove CHECK constraint on level (to allow 'NA')
     try:
-        conn.execute("ALTER TABLE player ADD COLUMN phone TEXT")
-    except:
-        pass
-    try:
-        conn.execute("ALTER TABLE player ADD COLUMN email TEXT")
-    except:
-        pass
-    try:
-        conn.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
+        info = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='player'").fetchone()
+        if info and "CHECK" in info[0]:
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS player_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    level TEXT NOT NULL,
+                    phone TEXT,
+                    email TEXT,
+                    card_type TEXT,
+                    points INTEGER NOT NULL DEFAULT 0
+                );
+                INSERT OR IGNORE INTO player_new (id, name, level, phone, email, card_type, points)
+                    SELECT id, name, level, phone, email, card_type, points FROM player;
+                DROP TABLE player;
+                ALTER TABLE player_new RENAME TO player;
+            """)
     except:
         pass
     try:

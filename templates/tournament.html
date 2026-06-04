@@ -406,6 +406,7 @@ async function joinTournament(pid) {
     const res = await fetch(`/api/tournaments/${TID}/join`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({player_id: pid}) });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
+    alert('✓ Successfully joined!');
     loadTournament();
 }
 
