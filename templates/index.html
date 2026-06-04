@@ -311,7 +311,7 @@ async function adminLogout() {
     loadTournaments();
 }
 
-function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } if(id==='viewPlayersModal') loadViewPlayers(); }
+function showModal(id) { document.getElementById(id).style.display = 'block'; if(id==='tournamentModal') { if(!editingTournamentId) { document.getElementById('tournamentModalTitle').textContent='Create Tournament'; document.getElementById('tName').value=''; } loadTournamentPlayers(); } if(id==='viewPlayersModal') loadViewPlayers(); if(id==='cardTypeModal') loadCardTypes(); }
 function hideModal(id) { document.getElementById(id).style.display = 'none'; }
 
 async function loadPlayers() {
