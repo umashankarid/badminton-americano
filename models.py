@@ -6,8 +6,9 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "americano.db")
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
@@ -108,7 +109,9 @@ def init_db():
     try:
         info = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='player'").fetchone()
         if info and "CHECK" in info[0]:
-            conn.executescript("""
+            conn.close()
+            migrate_conn = sqlite3.connect(DB_PATH, timeout=30)
+            migrate_conn.executescript("""
                 CREATE TABLE IF NOT EXISTS player_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL UNIQUE,
@@ -123,6 +126,8 @@ def init_db():
                 DROP TABLE player;
                 ALTER TABLE player_new RENAME TO player;
             """)
+            migrate_conn.close()
+            conn = sqlite3.connect(DB_PATH, timeout=30)
     except:
         pass
     try:

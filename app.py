@@ -131,20 +131,10 @@ def add_player():
     try:
         db.execute("INSERT INTO player (name, level, phone, email, card_type) VALUES (?, ?, ?, ?, ?)",
                    (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", "")))
-    except Exception:
-        # Fallback for old DB without phone/email/card_type columns
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN phone TEXT")
-        except: pass
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN email TEXT")
-        except: pass
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
-        except: pass
-        db.execute("INSERT INTO player (name, level, phone, email, card_type) VALUES (?, ?, ?, ?, ?)",
-                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", "")))
-    db.commit()
+        db.commit()
+    except Exception as e:
+        db.close()
+        return jsonify({"error": str(e)}), 400
     db.close()
     return jsonify({"ok": True}), 201
 
@@ -156,20 +146,12 @@ def edit_player(pid):
     try:
         db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
                    (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
-    except Exception:
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN phone TEXT")
-        except: pass
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN email TEXT")
-        except: pass
-        try:
-            db.execute("ALTER TABLE player ADD COLUMN card_type TEXT")
-        except: pass
-        db.execute("UPDATE player SET name = ?, level = ?, phone = ?, email = ?, card_type = ? WHERE id = ?",
-                   (data["name"], data["level"], data.get("phone", ""), data.get("email", ""), data.get("card_type", ""), pid))
-    db.commit()
+        db.commit()
+    except Exception as e:
+        db.close()
+        return jsonify({"error": str(e)}), 400
     db.close()
+    return jsonify({"ok": True})
     return jsonify({"ok": True})
 
 
