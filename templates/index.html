@@ -356,8 +356,13 @@ async function loadSeasons() {
     document.getElementById('seasonList').innerHTML = seasons.map(s => {
         const adminBtns = isAdmin ? `<button class="edit-btn" style="margin-left:4px;color:#c62828" onclick="deleteSeason(${s.id})">✕</button>` : '';
         const dates = s.start_date && s.end_date ? `<div style="font-size:0.8em;color:#666">${s.start_date} → ${s.end_date}</div>` : '';
-        return `<div class="tournament-item" style="background:#f3e5f5;border-color:#ce93d8">
-            <div><a href="/season/${s.id}" style="font-weight:600;color:#7b1fa2">${s.name}</a>${dates}</div>
+        const today = new Date().toISOString().split('T')[0];
+        const closed = s.registration_deadline && today > s.registration_deadline;
+        const style = closed ? 'background:#f5f5f5;border-color:#ccc;opacity:0.7' : 'background:#f3e5f5;border-color:#ce93d8';
+        const tag = closed ? '<span style="font-size:0.75em;background:#eee;color:#888;padding:2px 6px;border-radius:4px;margin-left:6px">Registration closed</span>' : '<span style="font-size:0.75em;background:#e8f5e9;color:#2e7d32;padding:2px 6px;border-radius:4px;margin-left:6px">Open</span>';
+        const deadlineInfo = s.registration_deadline ? `<div style="font-size:0.8em;color:#888">Deadline: ${s.registration_deadline}</div>` : '';
+        return `<div class="tournament-item" style="${style}">
+            <div><a href="/season/${s.id}" style="font-weight:600;color:${closed ? '#888' : '#7b1fa2'}">${s.name}</a>${tag}${dates}${deadlineInfo}</div>
             <span><span class="status-${s.status}">${s.status}</span>${adminBtns}</span>
         </div>`;
     }).join('');
