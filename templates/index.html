@@ -170,7 +170,7 @@ async function loadPlayers() {
     document.getElementById('editPlayerList').innerHTML = players.map(p =>
         `<div class="player-check" data-name="${p.name.toLowerCase()}" style="justify-content:space-between">
             <span>${p.name} <span class="badge badge-${p.level}">${p.level}</span></span>
-            <button class="edit-btn" onclick="editPlayer(${p.id},'${p.name}','${p.level}')">Edit</button>
+            <span><button class="edit-btn" onclick="editPlayer(${p.id},'${p.name}','${p.level}')">Edit</button> <button class="edit-btn" style="color:#c62828" onclick="deletePlayer(${p.id},'${p.name}')">✕</button></span>
         </div>`
     ).join('');
 }
@@ -195,6 +195,14 @@ function editPlayer(id, name, level) {
     document.getElementById('playerLevel').value = level;
     document.getElementById('playerModalTitle').textContent = 'Edit Player';
     showModal('playerModal');
+}
+
+async function deletePlayer(id, name) {
+    if (!confirm(`Delete player "${name}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    loadPlayers();
 }
 
 async function savePlayer() {

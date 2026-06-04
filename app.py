@@ -102,6 +102,25 @@ def edit_player(pid):
     return jsonify({"ok": True})
 
 
+@app.route("/api/players/<int:pid>", methods=["DELETE"])
+@admin_required
+def delete_player(pid):
+    db = get_db()
+    # Check if player is in any active tournament
+    active = db.execute(
+        "SELECT t.name FROM tournament_player tp JOIN tournament t ON tp.tournament_id = t.id WHERE tp.player_id = ? AND t.status = 'active' AND t.current_round > 0",
+        (pid,)
+    ).fetchone()
+    if active:
+        db.close()
+        return jsonify({"error": f"Cannot delete: player is in active tournament '{active['name']}'"}), 400
+    db.execute("DELETE FROM tournament_player WHERE player_id = ?", (pid,))
+    db.execute("DELETE FROM player WHERE id = ?", (pid,))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/players/<int:pid>/stats", methods=["GET"])
 def player_stats(pid):
     db = get_db()
