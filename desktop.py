@@ -1,7 +1,9 @@
-"""Desktop launcher: runs Flask app in a native window."""
+"""Desktop launcher: runs Flask app and opens browser."""
 import threading
-import webview
-from app import app, init_db
+import webbrowser
+import time
+from app import app
+from models import init_db
 
 def start_server():
     init_db()
@@ -10,5 +12,6 @@ def start_server():
 if __name__ == '__main__':
     server = threading.Thread(target=start_server, daemon=True)
     server.start()
-    webview.create_window('Komet Badminton Americano', 'http://127.0.0.1:5000', width=1200, height=800)
-    webview.start()
+    time.sleep(1)
+    webbrowser.open('http://127.0.0.1:5000')
+    input('Press Enter to stop the server...')
