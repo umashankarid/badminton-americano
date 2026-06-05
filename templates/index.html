@@ -63,6 +63,7 @@
         <div class="grid admin-only" style="margin-top:12px;display:none">
             <a href="/api/db/download" class="nav-btn" style="background:#555;text-decoration:none;font-size:0.9em">⬇ Download Data</a>
             <button class="nav-btn" style="background:#555;font-size:0.9em" onclick="document.getElementById('dbUpload').click()">⬆ Upload Data</button>
+            <button class="nav-btn" style="background:#555;font-size:0.9em" onclick="showModal('changePwModal')">🔑 Change Password</button>
             <input type="file" id="dbUpload" accept=".db" style="display:none" onchange="uploadDb(this)">
         </div>
     </div>
@@ -162,6 +163,18 @@
         <label style="font-weight:500;display:block;margin-bottom:4px">Registration Deadline</label>
         <input type="date" id="sDeadline" onclick="this.showPicker()">
         <button onclick="createSeason()">Create Season</button>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePwModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('changePwModal')">&times;</span>
+        <h2>Change Admin Password</h2>
+        <input type="password" id="oldPw" placeholder="Current password">
+        <input type="password" id="newPw" placeholder="New password">
+        <input type="password" id="confirmPw" placeholder="Confirm new password">
+        <button onclick="changePassword()">Change Password</button>
     </div>
 </div>
 
@@ -460,6 +473,22 @@ async function deleteSeason(id) {
     loadSeasons();
 }
 
+async function changePassword() {
+    const oldPw = document.getElementById('oldPw').value;
+    const newPw = document.getElementById('newPw').value;
+    const confirmPw = document.getElementById('confirmPw').value;
+    if (newPw !== confirmPw) { alert('Passwords do not match'); return; }
+    if (!newPw) { alert('Enter a new password'); return; }
+    const res = await fetch('/api/admin/change-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({old_password: oldPw, new_password: newPw}) });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    alert('Password changed!');
+    document.getElementById('oldPw').value = '';
+    document.getElementById('newPw').value = '';
+    document.getElementById('confirmPw').value = '';
+    hideModal('changePwModal');
+}
+
 function showSeasonInfo(id) {
     const s = window._seasonsData.find(x => x.id === id);
     if (s && s.info) {
@@ -491,7 +520,7 @@ async function loadTournaments() {
             const dateStr = t.date || 'TBD';
             return `<div class="tournament-item" style="flex-wrap:wrap;gap:8px">
                 <div>${seasonTag}<a href="/tournament/${slug}" style="font-weight:600;font-size:1.05em">${t.name}</a>
-                <div style="font-size:0.85em;color:#666">${t.level} · ${dateStr}</div></div>
+                <div style="font-size:0.85em;color:#666">${t.level} · ${dateStr} · ${t.player_count} players</div></div>
                 <a href="/tournament/${slug}" style="font-size:0.85em;color:#1a73e8">View Players →</a>
             </div>`;
         }
@@ -500,7 +529,7 @@ async function loadTournaments() {
         const dateStr = t.date ? ` · ${t.date}` : '';
         const statusText = t.status === 'finished' ? 'finished' : (t.current_round > 0 ? `round ${t.current_round}` : 'not started');
         return `<div class="tournament-item"><div>${seasonTag}<a href="/tournament/${slug}">${t.name}</a></div>
-         <span><span class="status-${t.status}">${statusText} · ${t.level}${dateStr}</span>${adminBtns}</span></div>`;
+         <span><span class="status-${t.status}">${statusText} · ${t.level}${dateStr} · ${t.player_count}p</span>${adminBtns}</span></div>`;
     }).join('') || '<p style="color:#888">No tournaments available</p>';
 }
 

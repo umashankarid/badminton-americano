@@ -49,6 +49,17 @@ def admin_status():
     return jsonify({"admin": session.get("admin", False)})
 
 
+@app.route("/api/admin/change-password", methods=["POST"])
+@admin_required
+def change_password():
+    global ADMIN_PASSWORD
+    data = request.json
+    if data.get("old_password") != ADMIN_PASSWORD:
+        return jsonify({"error": "Current password is wrong"}), 400
+    ADMIN_PASSWORD = data["new_password"]
+    return jsonify({"ok": True})
+
+
 @app.route("/how-it-works")
 def how_it_works():
     return render_template("how-it-works.html")
@@ -259,7 +270,13 @@ def get_season(sid):
     tournaments = db.execute(
         "SELECT * FROM tournament WHERE season_id = ? ORDER BY date, id", (sid,)
     ).fetchall()
-    s["tournaments"] = [dict(r) for r in tournaments]
+    t_list = []
+    for r in tournaments:
+        t = dict(r)
+        count = db.execute("SELECT COUNT(*) as c FROM tournament_player WHERE tournament_id = ?", (t["id"],)).fetchone()
+        t["player_count"] = count["c"]
+        t_list.append(t)
+    s["tournaments"] = t_list
     db.close()
     return jsonify(s)
 
@@ -287,6 +304,16 @@ def delete_season(sid):
     db.execute("DELETE FROM season_player WHERE season_id = ?", (sid,))
     db.execute("UPDATE tournament SET season_id = NULL WHERE season_id = ?", (sid,))
     db.execute("DELETE FROM season WHERE id = ?", (sid,))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/seasons/<int:sid>/finish", methods=["POST"])
+@admin_required
+def finish_season(sid):
+    db = get_db()
+    db.execute("UPDATE season SET status = 'finished' WHERE id = ?", (sid,))
     db.commit()
     db.close()
     return jsonify({"ok": True})
@@ -360,8 +387,14 @@ def get_tournament_by_slug(slug):
 def list_tournaments():
     db = get_db()
     rows = db.execute("SELECT * FROM tournament ORDER BY date DESC, id DESC").fetchall()
+    result = []
+    for r in rows:
+        t = dict(r)
+        count = db.execute("SELECT COUNT(*) as c FROM tournament_player WHERE tournament_id = ?", (t["id"],)).fetchone()
+        t["player_count"] = count["c"]
+        result.append(t)
     db.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(result)
 
 
 @app.route("/api/tournaments", methods=["POST"])

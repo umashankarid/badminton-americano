@@ -269,6 +269,15 @@ async function loadTournament() {
     for (const m of unplayed) html += matchCardInput(m);
     document.getElementById('currentMatches').innerHTML = html;
 
+    // Show who's sitting out this round
+    if (t.current_round > 0) {
+        const currentRoundMatches = t.matches.filter(m => m.round_num === t.current_round);
+        const playingIds = new Set();
+        currentRoundMatches.forEach(m => { playingIds.add(m.player_a1); playingIds.add(m.player_a2); playingIds.add(m.player_b1); playingIds.add(m.player_b2); });
+        const sittingOut = t.players.filter(p => !playingIds.has(p.id)).map(p => p.name);
+        document.getElementById('sitOutInfo').innerHTML = sittingOut.length > 0 ? `<div class="sit-out">🪑 Sitting out: ${sittingOut.join(', ')}</div>` : '';
+    }
+
     // All rounds history
     const rounds = {};
     for (const m of t.matches) {
