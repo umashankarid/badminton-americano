@@ -177,7 +177,7 @@ async function loadTournament() {
     if (t.error) { document.getElementById('tName').textContent = 'Tournament not found'; return; }
     TID = t.id;
     const isQuick = t.date === 'quick';
-    const canControl = isAdmin || isQuick;
+    window._canControl = isAdmin || isQuick;
 
     document.getElementById('tName').textContent = t.name;
     document.title = t.name;
@@ -251,7 +251,7 @@ async function loadTournament() {
     const allPlayed = currentMatches.length > 0 && currentMatches.every(m => m.played);
 
     if (t.current_round === 0 && t.status !== 'finished') {
-        const startBtn = canControl ? '<button onclick="startTournament()" style="background:#34a853;font-size:1.2em;padding:16px 32px">▶ Start Tournament</button>' : '<p style="color:#888">Waiting for admin to start the tournament...</p>';
+        const startBtn = window._canControl ? '<button onclick="startTournament()" style="background:#34a853;font-size:1.2em;padding:16px 32px">▶ Start Tournament</button>' : '<p style="color:#888">Waiting for admin to start the tournament...</p>';
         document.getElementById('currentMatches').innerHTML = startBtn;
         return;
     }
@@ -301,7 +301,7 @@ function startTournament() {
 }
 
 function matchCardInput(m) {
-    if (!canControl) {
+    if (!window._canControl) {
         return `<div class="match-card">
             <div class="court-label">Court ${m.court_num}</div>
             <div class="match-teams"><span class="team">${m.a1_name} + ${m.a2_name}</span><span class="vs">vs</span><span class="team">${m.b1_name} + ${m.b2_name}</span></div>
@@ -321,7 +321,7 @@ function matchCardInput(m) {
 }
 
 function matchCardPlayed(m) {
-    const editBtn = canControl ? `<button class="edit-score-btn" onclick="editScore(${m.id}, ${m.score_a}, ${m.score_b})">Edit</button>` : '';
+    const editBtn = window._canControl ? `<button class="edit-score-btn" onclick="editScore(${m.id}, ${m.score_a}, ${m.score_b})">Edit</button>` : '';
     return `<div class="match-card played">
         <div class="court-label">Court ${m.court_num}</div>
         <div class="match-teams"><span class="team">${m.a1_name} + ${m.a2_name}</span><span class="vs">vs</span><span class="team">${m.b1_name} + ${m.b2_name}</span></div>
