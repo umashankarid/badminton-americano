@@ -70,7 +70,7 @@
 
     <!-- Quick Tournament (visible to everyone) -->
     <div class="card">
-        <button class="nav-btn" style="background:#e65100;width:100%" onclick="showModal('quickTournamentModal')">⚡ Quick Tournament</button>
+        <button class="nav-btn" style="background:#e65100;width:100%" onclick="showModal('playAmericanoModal')">🏸 Play Americano</button>
     </div>
 
     <div class="card" id="seasonCard">
@@ -184,10 +184,10 @@
 </div>
 
 <!-- Quick Tournament Modal -->
-<div id="quickTournamentModal" class="modal">
+<div id="playAmericanoModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="hideModal('quickTournamentModal')">&times;</span>
-        <h2>⚡ Quick Tournament</h2>
+        <span class="close" onclick="hideModal('playAmericanoModal')">&times;</span>
+        <h2>🏸 Play Americano</h2>
         <input type="text" id="qtName" placeholder="Tournament name">
         <label style="font-weight:500;display:block;margin-bottom:4px">Players (one per line)</label>
         <textarea id="qtPlayers" placeholder="Anna&#10;Ben&#10;Chris&#10;David" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:120px;font-family:inherit;margin-bottom:10px"></textarea>
@@ -510,7 +510,7 @@ async function createQuickTournament() {
     });
     const result = await res.json();
     if (result.error) { alert(result.error); return; }
-    hideModal('quickTournamentModal');
+    hideModal('playAmericanoModal');
     window.location.href = `/tournament/${result.slug}`;
 }
 
