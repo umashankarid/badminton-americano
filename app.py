@@ -449,6 +449,8 @@ def quick_tournament():
     matches, sitting_out = result
 
     if matches:
+        from random import shuffle as _shuf
+        _shuf(matches)
         for court_num, (a1, a2, b1, b2) in enumerate(matches, 1):
             db.execute(
                 "INSERT INTO match (tournament_id, round_num, court_num, player_a1, player_a2, player_b1, player_b2) VALUES (?,?,?,?,?,?,?)",
@@ -613,6 +615,8 @@ def generate_next_round(tid):
         db.close()
         return jsonify({"finished": True, "message": "All partnerships played. Tournament complete!"})
 
+    from random import shuffle as _shuffle
+    _shuffle(matches)
     for court, (a1, a2, b1, b2) in enumerate(matches, 1):
         db.execute(
             "INSERT INTO match (tournament_id, round_num, court_num, player_a1, player_a2, player_b1, player_b2) VALUES (?,?,?,?,?,?,?)",
