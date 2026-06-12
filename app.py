@@ -397,6 +397,73 @@ def list_tournaments():
     return jsonify(result)
 
 
+@app.route("/api/quick-tournament", methods=["POST"])
+def quick_tournament():
+    """Create a quick tournament with player names — no registration needed."""
+    data = request.json
+    name = data.get("name", "").strip()
+    players = data.get("players", [])
+    max_points = data.get("max_points", 21)
+    courts = data.get("courts", 1)
+
+    if not name:
+        return jsonify({"error": "Tournament name is required"}), 400
+    if len(players) < 4:
+        return jsonify({"error": "Need at least 4 players"}), 400
+
+    db = get_db()
+    existing = db.execute("SELECT id FROM tournament WHERE name = ?", (name,)).fetchone()
+    if existing:
+        db.close()
+        return jsonify({"error": "Tournament with this name already exists"}), 400
+
+    # Create players if they don't exist (just names, level NA)
+    player_ids = []
+    for pname in players:
+        pname = pname.strip()
+        if not pname:
+            continue
+        row = db.execute("SELECT id FROM player WHERE name = ?", (pname,)).fetchone()
+        if row:
+            player_ids.append(row["id"])
+        else:
+            cur = db.execute("INSERT INTO player (name, level) VALUES (?, 'NA')", (pname,))
+            player_ids.append(cur.lastrowid)
+
+    # Create tournament (marked as quick)
+    cur = db.execute(
+        "INSERT INTO tournament (name, level, max_points, courts, date) VALUES (?, 'No-level', ?, ?, 'quick')",
+        (name, max_points, courts)
+    )
+    tid = cur.lastrowid
+    for pid in player_ids:
+        db.execute("INSERT INTO tournament_player (tournament_id, player_id) VALUES (?, ?)", (tid, pid))
+    db.commit()
+
+    # Auto-generate first round
+    from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts
+    used_pairs = get_used_pairs(db, tid)
+    player_points = get_tournament_points(db, tid)
+    sit_out_counts = get_sit_out_counts(db, tid)
+    result = generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_out_counts)
+    matches, sitting_out = result
+
+    if matches:
+        for court_num, (a1, a2, b1, b2) in enumerate(matches, 1):
+            db.execute(
+                "INSERT INTO match (tournament_id, round_num, court_num, player_a1, player_a2, player_b1, player_b2) VALUES (?,?,?,?,?,?,?)",
+                (tid, 1, court_num, a1, a2, b1, b2)
+            )
+        for pid in sitting_out:
+            db.execute("UPDATE tournament_player SET sit_outs = sit_outs + 1 WHERE tournament_id = ? AND player_id = ?", (tid, pid))
+        db.execute("UPDATE tournament SET current_round = 1 WHERE id = ?", (tid,))
+        db.commit()
+
+    db.close()
+    slug = name.lower().replace(" ", "-")
+    return jsonify({"id": tid, "slug": slug}), 201
+
+
 @app.route("/api/tournaments", methods=["POST"])
 @admin_required
 def create_tournament():
@@ -514,10 +581,13 @@ def get_tournament(tid):
 
 
 @app.route("/api/tournaments/<int:tid>/next-round", methods=["POST"])
-@admin_required
 def generate_next_round(tid):
     db = get_db()
     t = db.execute("SELECT * FROM tournament WHERE id = ?", (tid,)).fetchone()
+    # Check admin for non-quick tournaments
+    if t["date"] != "quick" and not session.get("admin"):
+        db.close()
+        return jsonify({"error": "Admin login required"}), 401
     if t["status"] == "finished":
         db.close()
         return jsonify({"error": "Tournament is finished"}), 400
@@ -569,13 +639,16 @@ def generate_next_round(tid):
 
 
 @app.route("/api/matches/<int:mid>/score", methods=["POST"])
-@admin_required
 def record_score(mid):
     data = request.json
     score_a, score_b = data["score_a"], data["score_b"]
     db = get_db()
     match = db.execute("SELECT * FROM match WHERE id = ?", (mid,)).fetchone()
-    t = db.execute("SELECT max_points FROM tournament WHERE id = ?", (match["tournament_id"],)).fetchone()
+    # Check admin for non-quick tournaments
+    t = db.execute("SELECT * FROM tournament WHERE id = ?", (match["tournament_id"],)).fetchone()
+    if t["date"] != "quick" and not session.get("admin"):
+        db.close()
+        return jsonify({"error": "Admin login required"}), 401
     max_pts = t["max_points"]
 
     if max(score_a, score_b) != max_pts:

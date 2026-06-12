@@ -68,6 +68,11 @@
         </div>
     </div>
 
+    <!-- Quick Tournament (visible to everyone) -->
+    <div class="card">
+        <button class="nav-btn" style="background:#e65100;width:100%" onclick="showModal('quickTournamentModal')">⚡ Quick Tournament</button>
+    </div>
+
     <div class="card" id="seasonCard">
         <h2 id="seasonListTitle">Seasons</h2>
         <div id="seasonList"><p style="color:#888">Loading...</p></div>
@@ -175,6 +180,22 @@
         <input type="password" id="newPw" placeholder="New password">
         <input type="password" id="confirmPw" placeholder="Confirm new password">
         <button onclick="changePassword()">Change Password</button>
+    </div>
+</div>
+
+<!-- Quick Tournament Modal -->
+<div id="quickTournamentModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="hideModal('quickTournamentModal')">&times;</span>
+        <h2>⚡ Quick Tournament</h2>
+        <input type="text" id="qtName" placeholder="Tournament name">
+        <label style="font-weight:500;display:block;margin-bottom:4px">Players (one per line)</label>
+        <textarea id="qtPlayers" placeholder="Anna&#10;Ben&#10;Chris&#10;David" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:120px;font-family:inherit;margin-bottom:10px"></textarea>
+        <div style="display:flex;gap:10px">
+            <div style="flex:1"><label style="font-size:0.85em;color:#666">Max Points</label><input type="number" id="qtMaxPoints" value="21" min="1"></div>
+            <div style="flex:1"><label style="font-size:0.85em;color:#666">Courts</label><input type="number" id="qtCourts" value="1" min="1"></div>
+        </div>
+        <button onclick="createQuickTournament()" style="margin-top:12px;width:100%;background:#e65100">Create & Start</button>
     </div>
 </div>
 
@@ -471,6 +492,26 @@ async function deleteSeason(id) {
     if (!confirm('Delete this season? Tournaments will be unlinked but not deleted.')) return;
     await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
     loadSeasons();
+}
+
+async function createQuickTournament() {
+    const name = document.getElementById('qtName').value.trim();
+    const playersText = document.getElementById('qtPlayers').value.trim();
+    const maxPoints = parseInt(document.getElementById('qtMaxPoints').value) || 21;
+    const courts = parseInt(document.getElementById('qtCourts').value) || 1;
+
+    if (!name) { alert('Enter a tournament name'); return; }
+    const playerNames = playersText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    if (playerNames.length < 4) { alert('Need at least 4 players'); return; }
+
+    const res = await fetch('/api/quick-tournament', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, players: playerNames, max_points: maxPoints, courts })
+    });
+    const result = await res.json();
+    if (result.error) { alert(result.error); return; }
+    hideModal('quickTournamentModal');
+    window.location.href = `/tournament/${result.slug}`;
 }
 
 async function changePassword() {
