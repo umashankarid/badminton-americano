@@ -89,31 +89,37 @@
     </div>
 
     <div class="card">
-        <h2>Match Balancing</h2>
-        <p>After Round 1, the system arranges opponents so that <strong>teams with similar combined points face each other</strong>. This makes matches more competitive as the tournament progresses.</p>
+        <h2>Opponent Distribution</h2>
+        <p>The system generates the <strong>entire schedule before the tournament starts</strong>, ensuring:</p>
+        <ul>
+            <li>Every player partners with every other player exactly once</li>
+            <li>Every player faces every other player an <strong>equal number of times</strong> as opponents</li>
+            <li>Players rotate across courts each round</li>
+        </ul>
 
         <div class="example">
-            <strong>Example:</strong> In Round 4, the pairs are formed based on partnerships (rotation), then opponents are matched:
-            <ul style="margin-top:8px">
-                <li>Anna+Ben (combined: +12) vs Chris+David (combined: +10) → close match!</li>
-                <li>Eva+Frank (combined: −3) vs Grace+Henry (combined: −5) → also close!</li>
-            </ul>
+            <strong>Example with 9 players:</strong> Each player faces every other player exactly <strong>2 times</strong> as opponents across 9 rounds — perfectly fair for everyone.
         </div>
+
+        <p>Courts are automatically calculated: <strong>courts = players ÷ 4</strong> (rounded down).</p>
     </div>
 
     <div class="card">
         <h2>Tournament Summary</h2>
 
         <table>
-            <tr><th>Players</th><th>Courts</th><th>Rounds</th><th>Matches</th></tr>
-            <tr><td>4</td><td>1</td><td>3</td><td>3</td></tr>
-            <tr><td>8</td><td>1</td><td>14</td><td>14</td></tr>
-            <tr><td>8</td><td>2</td><td>7</td><td>14</td></tr>
-            <tr><td>9</td><td>2</td><td>9</td><td>18</td></tr>
-            <tr><td>12</td><td>3</td><td>11</td><td>33</td></tr>
+            <tr><th>Players</th><th>Courts</th><th>Rounds</th><th>Matches</th><th>Matches/Player</th></tr>
+            <tr><td>4</td><td>1</td><td>3</td><td>3</td><td>3</td></tr>
+            <tr><td>5</td><td>1</td><td>5</td><td>5</td><td>4</td></tr>
+            <tr><td>8</td><td>2</td><td>7</td><td>14</td><td>7</td></tr>
+            <tr><td>9</td><td>2</td><td>9</td><td>18</td><td>8</td></tr>
+            <tr><td>12</td><td>3</td><td>11</td><td>33</td><td>11</td></tr>
+            <tr><td>16</td><td>4</td><td>15</td><td>60</td><td>15</td></tr>
+            <tr><td>20</td><td>5</td><td>19</td><td>95</td><td>19</td></tr>
+            <tr><td>24</td><td>6</td><td>23</td><td>138</td><td>23</td></tr>
         </table>
 
-        <p style="margin-top:12px;color:#666;font-size:0.9em">More courts = fewer rounds needed (more matches per round).</p>
+        <p style="margin-top:12px;color:#666;font-size:0.9em">Courts are auto-calculated. More players = more courts = more matches per round.</p>
     </div>
 
     <div class="card">
