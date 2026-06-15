@@ -1,190 +1,244 @@
-"""Pairing engine: rotate partners, balance opponents by points, handle sit-outs."""
-from itertools import combinations
-from random import shuffle
+"""Americano pairing engine: round-robin schedule with optimal opponent distribution."""
+from itertools import combinations, permutations
+from collections import defaultdict
+from random import shuffle, seed, sample, randint
 
-# Pre-computed optimal schedules for perfect opponent spread
-# Format: list of rounds, each round = (a1,a2,b1,b2, c1,c2,d1,d2, sit_out)
-# where (a1,a2) vs (b1,b2) on court 1, (c1,c2) vs (d1,d2) on court 2
+# Pre-computed optimal templates for perfect opponent spread (2-2)
 OPTIMAL_TEMPLATES = {
-    (9, 2): [  # 9 players, 2 courts — perfect 2-2 opponent spread
-        (3,2, 1,8, 4,5, 7,6, 0),
-        (2,0, 4,6, 7,8, 1,5, 3),
-        (0,3, 7,5, 1,6, 4,8, 2),
-        (4,7, 8,0, 6,2, 5,3, 1),
-        (7,1, 6,3, 5,0, 8,2, 4),
-        (1,4, 5,2, 8,3, 6,0, 7),
-        (6,5, 0,1, 3,7, 2,4, 8),
-        (5,8, 3,4, 2,1, 0,7, 6),
-        (8,6, 2,7, 0,4, 3,1, 5),
+    (8, 2): [
+        (0,1,2,3, 4,5,6,7),
+        (0,2,4,7, 5,6,1,3),
+        (0,4,1,5, 2,7,3,6),
+        (0,5,2,6, 3,7,1,4),
+        (0,3,5,7, 1,2,4,6),
+        (0,6,3,4, 2,5,1,7),
+        (0,7,1,6, 2,4,3,5),
     ],
-    (8, 2): [  # 8 players, 2 courts — 7 rounds, perfect 2-2
-        (0,1,2,3, 4,5,6,7, -1),
-        (0,2,4,7, 5,6,1,3, -1),
-        (0,4,1,5, 2,7,3,6, -1),
-        (0,5,2,6, 3,7,1,4, -1),
-        (0,3,5,7, 1,2,4,6, -1),
-        (0,6,3,4, 2,5,1,7, -1),
-        (0,7,1,6, 2,4,3,5, -1),
+    (9, 2): [
+        (3,2,1,8, 4,5,7,6, 0),
+        (2,0,4,6, 7,8,1,5, 3),
+        (0,3,7,5, 1,6,4,8, 2),
+        (4,7,8,0, 6,2,5,3, 1),
+        (7,1,6,3, 5,0,8,2, 4),
+        (1,4,5,2, 8,3,6,0, 7),
+        (6,5,0,1, 3,7,2,4, 8),
+        (5,8,3,4, 2,1,0,7, 6),
+        (8,6,2,7, 0,4,3,1, 5),
     ],
 }
 
 
-def use_template(player_ids, courts, current_round):
-    """Try to use a pre-computed optimal template. Returns (matches, sitting_out) or None."""
+def generate_full_schedule(player_ids, courts):
+    """Generate the complete tournament schedule upfront.
+    Returns list of rounds: [(matches, sitting_out), ...]
+    where matches = [(a1,a2,b1,b2), ...]
+    """
     n = len(player_ids)
-    key = (n, courts)
-    if key not in OPTIMAL_TEMPLATES:
-        return None
-    template = OPTIMAL_TEMPLATES[key]
-    if current_round < 1 or current_round > len(template):
-        return None
     
-    entry = template[current_round - 1]
-    if n == 9:
-        a1,a2,b1,b2,c1,c2,d1,d2,sit = entry
-        matches = [
-            (player_ids[a1], player_ids[a2], player_ids[b1], player_ids[b2]),
-            (player_ids[c1], player_ids[c2], player_ids[d1], player_ids[d2]),
-        ]
-        sitting_out = [player_ids[sit]]
-        return matches, sitting_out
-    elif n == 8:
-        a1,a2,b1,b2,c1,c2,d1,d2,_ = entry
-        matches = [
-            (player_ids[a1], player_ids[a2], player_ids[b1], player_ids[b2]),
-            (player_ids[c1], player_ids[c2], player_ids[d1], player_ids[d2]),
-        ]
-        return matches, []
-    return None, sample
+    # Use optimal template if available
+    key = (n, courts)
+    if key in OPTIMAL_TEMPLATES:
+        return _apply_template(player_ids, OPTIMAL_TEMPLATES[key], courts)
+    
+    # Otherwise use round-robin algorithm
+    return _generate_round_robin(player_ids, courts)
 
 
-def generate_all_partnerships(player_ids):
-    """Return all possible partner pairs from player list."""
-    return list(combinations(sorted(player_ids), 2))
+def _apply_template(player_ids, template, courts):
+    """Apply a pre-computed template to actual player IDs."""
+    n = len(player_ids)
+    # Shuffle player mapping for randomness
+    mapping = list(range(n))
+    shuffle(mapping)
+    
+    schedule = []
+    for entry in template:
+        if n == 8:
+            a1,a2,b1,b2, c1,c2,d1,d2 = entry
+            matches = [
+                (player_ids[mapping[a1]], player_ids[mapping[a2]], player_ids[mapping[b1]], player_ids[mapping[b2]]),
+                (player_ids[mapping[c1]], player_ids[mapping[c2]], player_ids[mapping[d1]], player_ids[mapping[d2]]),
+            ]
+            schedule.append((matches, []))
+        elif n == 9:
+            a1,a2,b1,b2, c1,c2,d1,d2, sit = entry
+            matches = [
+                (player_ids[mapping[a1]], player_ids[mapping[a2]], player_ids[mapping[b1]], player_ids[mapping[b2]]),
+                (player_ids[mapping[c1]], player_ids[mapping[c2]], player_ids[mapping[d1]], player_ids[mapping[d2]]),
+            ]
+            schedule.append((matches, [player_ids[mapping[sit]]]))
+    return schedule
 
+
+def _generate_round_robin(player_ids, courts):
+    """Generate schedule using round-robin with opponent optimization."""
+    n = len(player_ids)
+    players_per_round = courts * 4
+    n_sit = n - players_per_round
+    all_pairs = list(combinations(range(n), 2))
+    
+    # Try multiple seeds, pick best complete schedule
+    best_schedule = None
+    best_used = 0
+    best_opp_max = float('inf')
+    
+    for attempt in range(30):
+        seed(attempt + randint(0, 1000))
+        pair_pool = list(all_pairs)
+        shuffle(pair_pool)
+        
+        used_pairs = set()
+        sit_counts = [0] * n
+        rounds_of_pairs = []
+        
+        for _ in range(200):
+            if len(used_pairs) >= len(all_pairs):
+                break
+            
+            # Try multiple sit-out combos
+            best_round = None
+            for _ in range(8):
+                if n_sit > 0:
+                    sorted_p = sorted(range(n), key=lambda p: sit_counts[p])
+                    shuffle_group = [p for p in sorted_p if sit_counts[p] == sit_counts[sorted_p[0]]]
+                    shuffle(shuffle_group)
+                    sorted_p = shuffle_group + [p for p in sorted_p if p not in shuffle_group]
+                    sitting = sorted_p[:n_sit]
+                    active = set(range(n)) - set(sitting)
+                else:
+                    active = set(range(n))
+                    sitting = []
+                
+                available = [p for p in pair_pool if p not in used_pairs and p[0] in active and p[1] in active]
+                round_pairs = []
+                used_in_round = set()
+                for p in available:
+                    if p[0] in used_in_round or p[1] in used_in_round:
+                        continue
+                    round_pairs.append(p)
+                    used_in_round.update(p)
+                    if len(round_pairs) == courts * 2:
+                        break
+                
+                if len(round_pairs) % 2 != 0:
+                    round_pairs = round_pairs[:-1]
+                
+                if round_pairs and (not best_round or len(round_pairs) > len(best_round[0])):
+                    best_round = (round_pairs, sitting)
+            
+            if not best_round or not best_round[0]:
+                break
+            
+            rp, sitting = best_round
+            for p in rp:
+                used_pairs.add(p)
+            for p in sitting:
+                sit_counts[p] += 1
+            rounds_of_pairs.append(best_round)
+        
+        if len(used_pairs) > best_used:
+            best_used = len(used_pairs)
+            # Build schedule with opponent optimization
+            schedule = _assign_opponents(rounds_of_pairs, n)
+            opp_counts = _count_opponents(schedule)
+            opp_max = max(opp_counts.values()) if opp_counts else 0
+            if opp_max < best_opp_max:
+                best_opp_max = opp_max
+                best_schedule = schedule
+            if len(used_pairs) == len(all_pairs) and opp_max <= 3:
+                break
+    
+    # Convert indices to actual player IDs
+    if best_schedule:
+        return [([(player_ids[a1], player_ids[a2], player_ids[b1], player_ids[b2]) for a1,a2,b1,b2 in matches],
+                 [player_ids[p] for p in sitting]) for matches, sitting in best_schedule]
+    return []
+
+
+def _assign_opponents(rounds_of_pairs, n_players):
+    """Assign which pairs play against which, minimizing opponent repetition."""
+    schedule = []
+    opp_counts = defaultdict(int)
+    
+    for round_pairs, sitting in rounds_of_pairs:
+        if len(round_pairs) < 2:
+            continue
+        indices = list(range(len(round_pairs)))
+        best_matches = None
+        best_score = float('inf')
+        
+        # Try all permutations for small, sample for large
+        if len(indices) <= 8:
+            tried = set()
+            for perm in permutations(indices):
+                groups = tuple(sorted(tuple(sorted([perm[i], perm[i+1]])) for i in range(0, len(perm)-1, 2)))
+                if groups in tried:
+                    continue
+                tried.add(groups)
+                matches, score = _score_pairing(perm, round_pairs, opp_counts)
+                if score < best_score:
+                    best_score = score
+                    best_matches = matches
+        else:
+            for _ in range(300):
+                perm = list(indices)
+                shuffle(perm)
+                matches, score = _score_pairing(perm, round_pairs, opp_counts)
+                if score < best_score:
+                    best_score = score
+                    best_matches = matches
+        
+        if best_matches:
+            for a1, a2, b1, b2 in best_matches:
+                for t1 in (a1, a2):
+                    for t2 in (b1, b2):
+                        opp_counts[(min(t1, t2), max(t1, t2))] += 1
+            schedule.append((best_matches, sitting))
+    
+    return schedule
+
+
+def _score_pairing(perm, round_pairs, opp_counts):
+    matches = []
+    score = 0
+    for i in range(0, len(perm)-1, 2):
+        pa = round_pairs[perm[i]]
+        pb = round_pairs[perm[i+1]]
+        matches.append((pa[0], pa[1], pb[0], pb[1]))
+        for t1 in pa:
+            for t2 in pb:
+                score += opp_counts[(min(t1, t2), max(t1, t2))]
+    return matches, score
+
+
+def _count_opponents(schedule):
+    opp = defaultdict(int)
+    for matches, _ in schedule:
+        for a1, a2, b1, b2 in matches:
+            for t1 in (a1, a2):
+                for t2 in (b1, b2):
+                    opp[(min(t1, t2), max(t1, t2))] += 1
+    return opp
+
+
+# --- Legacy interface for app.py ---
 
 def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_out_counts=None, prev_groups=None, opponent_counts=None):
-    """Generate one round of matches.
-
-    - Handles non-divisible-by-4 player counts by sitting out players.
-    - Players who have sat out the MOST get priority to play.
-    - Partners are chosen from unused pairs (rotate everyone with everyone).
-    - Opponents are balanced by combined team points.
-    - Avoids putting same 4 players on same court as previous round.
-    - Spreads opponents evenly (avoids same pair facing each other repeatedly).
-    - Returns (matches, sitting_out): matches=[(a1, a2, b1, b2), ...], sitting_out=[player_ids]
-    """
-    if sit_out_counts is None:
-        sit_out_counts = {pid: 0 for pid in player_ids}
-
-    # Try pre-computed optimal template first
+    """Generate one round. Uses full schedule internally, returns round by round."""
     n = len(player_ids)
     current_round = len(used_pairs) // (courts * 2) + 1
-    template_result = use_template(player_ids, courts, current_round)
-    if template_result is not None:
-        return template_result
-
-    n = len(player_ids)
-    max_playing = courts * 4
-
-    # Determine who sits out: players who have sat out the MOST get priority to play
-    if n > max_playing:
-        sorted_players = sorted(player_ids, key=lambda p: sit_out_counts.get(p, 0), reverse=True)
-        active_players = sorted_players[:max_playing]
-        sitting_out = sorted_players[max_playing:]
-    elif n % 4 != 0:
-        num_sit = n % 4
-        sorted_players = sorted(player_ids, key=lambda p: sit_out_counts.get(p, 0), reverse=True)
-        active_players = sorted_players[:n - num_sit]
-        sitting_out = sorted_players[n - num_sit:]
-    else:
-        active_players = list(player_ids)
-        sitting_out = []
-
-    # Find valid matches: pick pairs of unused partnerships that form a complete match (4 distinct players)
-    available_pairs = [p for p in generate_all_partnerships(active_players) if p not in used_pairs]
-    if not available_pairs:
-        return None, sitting_out
-
-    # Try to find the best set of matches for this round
-    # A match = 2 unused pairs with 4 distinct players
-    best_matches = _find_matches(available_pairs, courts, player_points, prev_groups or [], opponent_counts or {})
-
-    if not best_matches:
-        return None, sitting_out
-
-    return best_matches, sitting_out
-
-
-def _find_matches(available_pairs, courts, player_points, prev_groups, opponent_counts):
-    """Find up to `courts` matches, maximizing court usage and player mixing."""
-    candidates = []
-    prev_group_sets = [frozenset(g) for g in prev_groups]
-
-    seen = set()
-    for pair_a in available_pairs:
-        for pair_b in available_pairs:
-            if pair_b <= pair_a:
-                continue
-            four = {pair_a[0], pair_a[1], pair_b[0], pair_b[1]}
-            if len(four) == 4:
-                key = (pair_a, pair_b)
-                if key not in seen:
-                    seen.add(key)
-                    team_a_pts = player_points.get(pair_a[0], 0) + player_points.get(pair_a[1], 0)
-                    team_b_pts = player_points.get(pair_b[0], 0) + player_points.get(pair_b[1], 0)
-                    balance = abs(team_a_pts - team_b_pts)
-                    # Penalize same 4 players grouped together as previous round
-                    group_penalty = 1000 if frozenset(four) in prev_group_sets else 0
-                    # Penalize repeated opponents (sum of how often each cross-team pair faced each other)
-                    opp_penalty = 0
-                    for t1 in pair_a:
-                        for t2 in pair_b:
-                            k = (min(t1, t2), max(t1, t2))
-                            opp_penalty += opponent_counts.get(k, 0) * 50
-                    candidates.append((pair_a, pair_b, balance + group_penalty + opp_penalty))
-
-    if not candidates:
-        return None
-
-    candidates.sort(key=lambda x: x[2])
-
-    best = _greedy_select(candidates, courts)
-
-    if len(best) < courts and len(candidates) >= courts:
-        from random import shuffle as rshuffle
-        for _ in range(200):
-            rshuffle(candidates)
-            attempt = _greedy_select(candidates, courts)
-            if len(attempt) > len(best):
-                best = attempt
-            if len(best) == courts:
-                break
-
-    return best if best else None
-
-
-def _greedy_select(candidates, courts):
-    matches = []
-    used_players = set()
-    used_pairs_in_round = set()
-    for pair_a, pair_b, _ in candidates:
-        four = {pair_a[0], pair_a[1], pair_b[0], pair_b[1]}
-        if four & used_players:
-            continue
-        if pair_a in used_pairs_in_round or pair_b in used_pairs_in_round:
-            continue
-        matches.append((pair_a[0], pair_a[1], pair_b[0], pair_b[1]))
-        used_players.update(four)
-        used_pairs_in_round.add(pair_a)
-        used_pairs_in_round.add(pair_b)
-        if len(matches) == courts:
-            break
-    return matches
+    
+    # Generate full schedule and return the requested round
+    schedule = generate_full_schedule(player_ids, courts)
+    
+    if current_round > len(schedule):
+        return None, []
+    
+    matches, sitting_out = schedule[current_round - 1]
+    return matches, sitting_out
 
 
 def get_used_pairs(db, tournament_id):
-    """Get all partner pairs already used in this tournament."""
     rows = db.execute(
         "SELECT player_a1, player_a2, player_b1, player_b2 FROM match WHERE tournament_id = ?",
         (tournament_id,)
@@ -197,7 +251,6 @@ def get_used_pairs(db, tournament_id):
 
 
 def get_tournament_points(db, tournament_id):
-    """Get current points for all players in tournament."""
     rows = db.execute(
         "SELECT player_id, points FROM tournament_player WHERE tournament_id = ?",
         (tournament_id,)
@@ -206,7 +259,6 @@ def get_tournament_points(db, tournament_id):
 
 
 def get_sit_out_counts(db, tournament_id):
-    """Get how many times each player has sat out."""
     rows = db.execute(
         "SELECT player_id, sit_outs FROM tournament_player WHERE tournament_id = ?",
         (tournament_id,)
@@ -215,7 +267,6 @@ def get_sit_out_counts(db, tournament_id):
 
 
 def get_prev_groups(db, tournament_id, current_round):
-    """Get the groups of 4 players from the previous round."""
     if current_round <= 1:
         return []
     rows = db.execute(
@@ -226,7 +277,6 @@ def get_prev_groups(db, tournament_id, current_round):
 
 
 def get_opponent_counts(db, tournament_id):
-    """Get how many times each pair of players have been opponents."""
     rows = db.execute(
         "SELECT player_a1, player_a2, player_b1, player_b2 FROM match WHERE tournament_id = ?",
         (tournament_id,)
