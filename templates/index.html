@@ -143,13 +143,12 @@
             <option value="C">Level C</option>
         </select>
         <label for="tMaxPoints" style="font-weight:500;display:block;margin-bottom:4px">Max Points to Win</label>
-        <input type="number" id="tMaxPoints" value="15" min="1">
-        <label for="tCourts" style="font-weight:500;display:block;margin-bottom:4px">Number of Courts</label>
-        <input type="number" id="tCourts" value="1" min="1">
+        <input type="number" id="tMaxPoints" value="15" min="1" oninput="updateTournamentInfo()">
         <h3 style="margin:10px 0">Select Players</h3>
         <input type="text" id="tPlayerSearch" placeholder="Search players..." oninput="filterTournamentPlayers()">
         <div style="margin-bottom:8px"><button type="button" onclick="toggleAllPlayers(true)" style="padding:4px 10px;font-size:0.85em">Select All</button> <button type="button" onclick="toggleAllPlayers(false)" style="padding:4px 10px;font-size:0.85em;background:#666">Deselect All</button> <span id="tPlayerCount" style="margin-left:8px;color:#666;font-size:0.9em"></span></div>
         <div id="tPlayerList" style="max-height:250px;overflow-y:auto"></div>
+        <div id="tTournamentInfo" style="font-size:0.85em;color:#666;padding:8px;background:#f0f8ff;border-radius:6px;margin-top:10px;display:none"></div>
         <button onclick="createTournament()" style="margin-top:12px">Create Tournament</button>
     </div>
 </div>
@@ -416,6 +415,31 @@ function toggleAllPlayers(state) {
 function updatePlayerCount() {
     const count = document.querySelectorAll('#tPlayerList input:checked').length;
     document.getElementById('tPlayerCount').textContent = `${count} selected`;
+    updateTournamentInfo();
+}
+
+function updateTournamentInfo() {
+    const players = document.querySelectorAll('#tPlayerList input:checked').length;
+    const info = document.getElementById('tTournamentInfo');
+    if (players < 4) { info.style.display = 'none'; return; }
+    const courts = Math.floor(players / 4);
+    const totalPairs = players * (players - 1) / 2;
+    const matches = Math.ceil(totalPairs / 2);
+    const pairsPerRound = courts * 2;
+    const rounds = Math.ceil(totalPairs / pairsPerRound);
+    const matchesPerPlayer = players - 1;
+    const sitOuts = players - (courts * 4);
+    const maxPts = parseInt(document.getElementById('tMaxPoints').value) || 15;
+    const minPerRound = maxPts <= 15 ? 12 : 17;
+    const estMinutes = rounds * minPerRound;
+    const hours = Math.floor(estMinutes / 60);
+    const mins = estMinutes % 60;
+    const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    info.style.display = '';
+    info.innerHTML = `<strong>${players} players · ${courts} court${courts>1?'s':''}</strong><br>` +
+        `📊 ${matches} matches · ${rounds} rounds · ${matchesPerPlayer} matches/player<br>` +
+        `⏱️ ~${duration} (approx. ${minPerRound} min/round)` +
+        (sitOuts > 0 ? `<br>🪑 ${sitOuts} player${sitOuts>1?'s':''} sit out each round` : '');
 }
 
 async function createTournament() {
@@ -425,7 +449,7 @@ async function createTournament() {
         name: document.getElementById('tName').value,
         level: document.getElementById('tLevel').value,
         max_points: parseInt(document.getElementById('tMaxPoints').value),
-        courts: parseInt(document.getElementById('tCourts').value),
+        courts: Math.floor(player_ids.length / 4) || 1,
         date: document.getElementById('tDate').value,
         player_ids
     };
