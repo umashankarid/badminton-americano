@@ -615,12 +615,40 @@ def generate_next_round(tid):
         db.close()
         return jsonify({"finished": True, "message": "All partnerships played. Tournament complete!"})
 
+    # Assign courts: avoid putting same players on the same court as last round
+    prev_matches = db.execute(
+        "SELECT player_a1, player_a2, player_b1, player_b2, court_num FROM match WHERE tournament_id = ? AND round_num = ?",
+        (tid, round_num - 1)
+    ).fetchall()
+    prev_court = {}
+    for pm in prev_matches:
+        for pid in (pm["player_a1"], pm["player_a2"], pm["player_b1"], pm["player_b2"]):
+            prev_court[pid] = pm["court_num"]
+
+    # Try to assign matches to courts so players switch courts
     from random import shuffle as _shuffle
-    _shuffle(matches)
-    for court, (a1, a2, b1, b2) in enumerate(matches, 1):
+    best_assignment = list(range(len(matches)))
+    if len(matches) > 1:
+        import itertools
+        best_score = -1
+        for perm in (itertools.permutations(range(len(matches))) if len(matches) <= 4 else []):
+            score = 0
+            for court_idx, match_idx in enumerate(perm, 1):
+                a1, a2, b1, b2 = matches[match_idx]
+                for pid in (a1, a2, b1, b2):
+                    if prev_court.get(pid, 0) != court_idx:
+                        score += 1
+            if score > best_score:
+                best_score = score
+                best_assignment = list(perm)
+        if best_score == -1:
+            _shuffle(best_assignment)
+
+    for court_idx, match_idx in enumerate(best_assignment, 1):
+        a1, a2, b1, b2 = matches[match_idx]
         db.execute(
             "INSERT INTO match (tournament_id, round_num, court_num, player_a1, player_a2, player_b1, player_b2) VALUES (?,?,?,?,?,?,?)",
-            (tid, round_num, court, a1, a2, b1, b2)
+            (tid, round_num, court_idx, a1, a2, b1, b2)
         )
 
     # Update sit-out counts
