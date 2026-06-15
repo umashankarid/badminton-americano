@@ -1,6 +1,61 @@
 """Pairing engine: rotate partners, balance opponents by points, handle sit-outs."""
 from itertools import combinations
-from random import shuffle, sample
+from random import shuffle
+
+# Pre-computed optimal schedules for perfect opponent spread
+# Format: list of rounds, each round = (a1,a2,b1,b2, c1,c2,d1,d2, sit_out)
+# where (a1,a2) vs (b1,b2) on court 1, (c1,c2) vs (d1,d2) on court 2
+OPTIMAL_TEMPLATES = {
+    (9, 2): [  # 9 players, 2 courts — perfect 2-2 opponent spread
+        (3,2, 1,8, 4,5, 7,6, 0),
+        (2,0, 4,6, 7,8, 1,5, 3),
+        (0,3, 7,5, 1,6, 4,8, 2),
+        (4,7, 8,0, 6,2, 5,3, 1),
+        (7,1, 6,3, 5,0, 8,2, 4),
+        (1,4, 5,2, 8,3, 6,0, 7),
+        (6,5, 0,1, 3,7, 2,4, 8),
+        (5,8, 3,4, 2,1, 0,7, 6),
+        (8,6, 2,7, 0,4, 3,1, 5),
+    ],
+    (8, 2): [  # 8 players, 2 courts — 7 rounds, perfect 2-2
+        (0,1,2,3, 4,5,6,7, -1),
+        (0,2,4,7, 5,6,1,3, -1),
+        (0,4,1,5, 2,7,3,6, -1),
+        (0,5,2,6, 3,7,1,4, -1),
+        (0,3,5,7, 1,2,4,6, -1),
+        (0,6,3,4, 2,5,1,7, -1),
+        (0,7,1,6, 2,4,3,5, -1),
+    ],
+}
+
+
+def use_template(player_ids, courts, current_round):
+    """Try to use a pre-computed optimal template. Returns (matches, sitting_out) or None."""
+    n = len(player_ids)
+    key = (n, courts)
+    if key not in OPTIMAL_TEMPLATES:
+        return None
+    template = OPTIMAL_TEMPLATES[key]
+    if current_round < 1 or current_round > len(template):
+        return None
+    
+    entry = template[current_round - 1]
+    if n == 9:
+        a1,a2,b1,b2,c1,c2,d1,d2,sit = entry
+        matches = [
+            (player_ids[a1], player_ids[a2], player_ids[b1], player_ids[b2]),
+            (player_ids[c1], player_ids[c2], player_ids[d1], player_ids[d2]),
+        ]
+        sitting_out = [player_ids[sit]]
+        return matches, sitting_out
+    elif n == 8:
+        a1,a2,b1,b2,c1,c2,d1,d2,_ = entry
+        matches = [
+            (player_ids[a1], player_ids[a2], player_ids[b1], player_ids[b2]),
+            (player_ids[c1], player_ids[c2], player_ids[d1], player_ids[d2]),
+        ]
+        return matches, []
+    return None, sample
 
 
 def generate_all_partnerships(player_ids):
@@ -21,6 +76,13 @@ def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_o
     """
     if sit_out_counts is None:
         sit_out_counts = {pid: 0 for pid in player_ids}
+
+    # Try pre-computed optimal template first
+    n = len(player_ids)
+    current_round = len(used_pairs) // (courts * 2) + 1
+    template_result = use_template(player_ids, courts, current_round)
+    if template_result is not None:
+        return template_result
 
     n = len(player_ids)
     max_playing = courts * 4
