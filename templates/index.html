@@ -525,11 +525,11 @@ async function createQuickTournament() {
     const name = document.getElementById('qtName').value.trim();
     const playersText = document.getElementById('qtPlayers').value.trim();
     const maxPoints = parseInt(document.getElementById('qtMaxPoints').value) || 21;
-    const courts = Math.floor(playerNames.length / 4);
 
     if (!name) { alert('Enter a tournament name'); return; }
     const playerNames = playersText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
     if (playerNames.length < 4) { alert('Need at least 4 players'); return; }
+    const courts = Math.floor(playerNames.length / 4);
 
     const res = await fetch('/api/quick-tournament', {
         method: 'POST', headers: {'Content-Type':'application/json'},
