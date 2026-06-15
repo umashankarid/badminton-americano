@@ -195,7 +195,7 @@
         <textarea id="qtPlayers" placeholder="Anna&#10;Ben&#10;Chris&#10;David" oninput="updateQtInfo()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:120px;font-family:inherit;margin-bottom:10px"></textarea>
         <div id="qtInfo" style="font-size:0.85em;color:#666;padding:8px;background:#f0f8ff;border-radius:6px;display:none"></div>
         <div style="display:flex;gap:10px">
-            <div style="flex:1"><label style="font-size:0.85em;color:#666">Max Points</label><input type="number" id="qtMaxPoints" value="21" min="1"></div>
+            <div style="flex:1"><label style="font-size:0.85em;color:#666">Max Points</label><input type="number" id="qtMaxPoints" value="21" min="1" oninput="updateQtInfo()"></div>
         </div>
         <button onclick="createQuickTournament()" style="margin-top:12px;width:100%;background:linear-gradient(135deg, #e65100, #ff6d00)">Create & Start</button>
     </div>
@@ -508,14 +508,16 @@ function updateQtInfo() {
     const rounds = Math.ceil(totalPairs / pairsPerRound);
     const matchesPerPlayer = players - 1;
     const sitOuts = players - (courts * 4);
-    const estMinutes = rounds * 17; // ~17 min per round (play + changeover)
+    const maxPts = parseInt(document.getElementById('qtMaxPoints').value) || 21;
+    const minPerRound = maxPts <= 15 ? 12 : 17;
+    const estMinutes = rounds * minPerRound;
     const hours = Math.floor(estMinutes / 60);
     const mins = estMinutes % 60;
     const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     info.style.display = '';
     info.innerHTML = `<strong>${players} players · ${courts} court${courts>1?'s':''}</strong><br>` +
         `📊 ${matches} matches · ${rounds} rounds · ${matchesPerPlayer} matches/player<br>` +
-        `⏱️ Estimated duration: ~${duration}` +
+        `⏱️ Estimated duration: ~${duration} (approx. ${minPerRound} min/round)` +
         (sitOuts > 0 ? `<br>🪑 ${sitOuts} player${sitOuts>1?'s':''} sit out each round` : '');
 }
 
