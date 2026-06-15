@@ -596,6 +596,8 @@ def generate_next_round(tid):
 
     player_rows = db.execute("SELECT player_id FROM tournament_player WHERE tournament_id = ?", (tid,)).fetchall()
     player_ids = [r["player_id"] for r in player_rows]
+    from random import shuffle as _shuf
+    _shuf(player_ids)
 
     if len(player_ids) < 4:
         db.close()
