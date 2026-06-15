@@ -3,7 +3,7 @@ import os
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, send_file, session
 from models import get_db, init_db, DB_PATH
-from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts
+from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts, get_prev_groups, get_opponent_counts
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "komet-badminton-2026")
@@ -441,7 +441,7 @@ def quick_tournament():
     db.commit()
 
     # Auto-generate first round
-    from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts
+    from pairing import generate_round_pairings, get_used_pairs, get_tournament_points, get_sit_out_counts, get_prev_groups, get_opponent_counts
     used_pairs = get_used_pairs(db, tid)
     player_points = get_tournament_points(db, tid)
     sit_out_counts = get_sit_out_counts(db, tid)
@@ -605,8 +605,10 @@ def generate_next_round(tid):
     player_points = get_tournament_points(db, tid)
     sit_out_counts = get_sit_out_counts(db, tid)
     round_num = t["current_round"] + 1
+    prev_groups = get_prev_groups(db, tid, round_num)
+    opp_counts = get_opponent_counts(db, tid)
 
-    result = generate_round_pairings(player_ids, used_pairs, t["courts"], player_points, sit_out_counts)
+    result = generate_round_pairings(player_ids, used_pairs, t["courts"], player_points, sit_out_counts, prev_groups, opp_counts)
     matches, sitting_out = result
 
     if not matches:

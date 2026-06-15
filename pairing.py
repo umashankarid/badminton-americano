@@ -8,13 +8,15 @@ def generate_all_partnerships(player_ids):
     return list(combinations(sorted(player_ids), 2))
 
 
-def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_out_counts=None):
+def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_out_counts=None, prev_groups=None, opponent_counts=None):
     """Generate one round of matches.
 
     - Handles non-divisible-by-4 player counts by sitting out players.
     - Players who have sat out the MOST get priority to play.
     - Partners are chosen from unused pairs (rotate everyone with everyone).
     - Opponents are balanced by combined team points.
+    - Avoids putting same 4 players on same court as previous round.
+    - Spreads opponents evenly (avoids same pair facing each other repeatedly).
     - Returns (matches, sitting_out): matches=[(a1, a2, b1, b2), ...], sitting_out=[player_ids]
     """
     if sit_out_counts is None:
@@ -44,7 +46,7 @@ def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_o
 
     # Try to find the best set of matches for this round
     # A match = 2 unused pairs with 4 distinct players
-    best_matches = _find_matches(available_pairs, courts, player_points)
+    best_matches = _find_matches(available_pairs, courts, player_points, prev_groups or [], opponent_counts or {})
 
     if not best_matches:
         return None, sitting_out
@@ -52,15 +54,10 @@ def generate_round_pairings(player_ids, used_pairs, courts, player_points, sit_o
     return best_matches, sitting_out
 
 
-def _find_matches(available_pairs, courts, player_points):
-    """Find up to `courts` matches from available pairs, maximizing court usage."""
-    # Build candidate matches: all valid (pair_a, pair_b) with 4 distinct players
+def _find_matches(available_pairs, courts, player_points, prev_groups, opponent_counts):
+    """Find up to `courts` matches, maximizing court usage and player mixing."""
     candidates = []
-    pair_set = set(available_pairs)
-    indexed = {}
-    for p in available_pairs:
-        for pid in p:
-            indexed.setdefault(pid, []).append(p)
+    prev_group_sets = [frozenset(g) for g in prev_groups]
 
     seen = set()
     for pair_a in available_pairs:
@@ -72,23 +69,26 @@ def _find_matches(available_pairs, courts, player_points):
                 key = (pair_a, pair_b)
                 if key not in seen:
                     seen.add(key)
-                    combined = sum(player_points.get(p, 0) for p in four)
-                    # Score difference between teams for balance
                     team_a_pts = player_points.get(pair_a[0], 0) + player_points.get(pair_a[1], 0)
                     team_b_pts = player_points.get(pair_b[0], 0) + player_points.get(pair_b[1], 0)
                     balance = abs(team_a_pts - team_b_pts)
-                    candidates.append((pair_a, pair_b, balance))
+                    # Penalize same 4 players grouped together as previous round
+                    group_penalty = 1000 if frozenset(four) in prev_group_sets else 0
+                    # Penalize repeated opponents (sum of how often each cross-team pair faced each other)
+                    opp_penalty = 0
+                    for t1 in pair_a:
+                        for t2 in pair_b:
+                            k = (min(t1, t2), max(t1, t2))
+                            opp_penalty += opponent_counts.get(k, 0) * 50
+                    candidates.append((pair_a, pair_b, balance + group_penalty + opp_penalty))
 
     if not candidates:
         return None
 
-    # Sort by balance (prefer more balanced matches)
     candidates.sort(key=lambda x: x[2])
 
-    # Try to fill all courts. Use backtracking if greedy fails.
     best = _greedy_select(candidates, courts)
 
-    # If greedy didn't fill all courts, try shuffling priorities
     if len(best) < courts and len(candidates) >= courts:
         from random import shuffle as rshuffle
         for _ in range(200):
@@ -150,3 +150,29 @@ def get_sit_out_counts(db, tournament_id):
         (tournament_id,)
     ).fetchall()
     return {r["player_id"]: r["sit_outs"] for r in rows}
+
+
+def get_prev_groups(db, tournament_id, current_round):
+    """Get the groups of 4 players from the previous round."""
+    if current_round <= 1:
+        return []
+    rows = db.execute(
+        "SELECT player_a1, player_a2, player_b1, player_b2 FROM match WHERE tournament_id = ? AND round_num = ?",
+        (tournament_id, current_round - 1)
+    ).fetchall()
+    return [{r["player_a1"], r["player_a2"], r["player_b1"], r["player_b2"]} for r in rows]
+
+
+def get_opponent_counts(db, tournament_id):
+    """Get how many times each pair of players have been opponents."""
+    rows = db.execute(
+        "SELECT player_a1, player_a2, player_b1, player_b2 FROM match WHERE tournament_id = ?",
+        (tournament_id,)
+    ).fetchall()
+    counts = {}
+    for r in rows:
+        for t1 in (r["player_a1"], r["player_a2"]):
+            for t2 in (r["player_b1"], r["player_b2"]):
+                k = (min(t1, t2), max(t1, t2))
+                counts[k] = counts.get(k, 0) + 1
+    return counts
