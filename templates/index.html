@@ -192,7 +192,8 @@
         <h2>🏸 Play Americano</h2>
         <input type="text" id="qtName" placeholder="Tournament name">
         <label style="font-weight:500;display:block;margin-bottom:4px">Players (one per line)</label>
-        <textarea id="qtPlayers" placeholder="Anna&#10;Ben&#10;Chris&#10;David" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:120px;font-family:inherit;margin-bottom:10px"></textarea>
+        <textarea id="qtPlayers" placeholder="Anna&#10;Ben&#10;Chris&#10;David" oninput="updateQtInfo()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:120px;font-family:inherit;margin-bottom:10px"></textarea>
+        <div id="qtInfo" style="font-size:0.85em;color:#666;padding:8px;background:#f0f8ff;border-radius:6px;display:none"></div>
         <div style="display:flex;gap:10px">
             <div style="flex:1"><label style="font-size:0.85em;color:#666">Max Points</label><input type="number" id="qtMaxPoints" value="21" min="1"></div>
         </div>
@@ -493,6 +494,29 @@ async function deleteSeason(id) {
     if (!confirm('Delete this season? Tournaments will be unlinked but not deleted.')) return;
     await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
     loadSeasons();
+}
+
+function updateQtInfo() {
+    const text = document.getElementById('qtPlayers').value.trim();
+    const players = text.split('\n').filter(s => s.trim().length > 0).length;
+    const info = document.getElementById('qtInfo');
+    if (players < 4) { info.style.display = 'none'; return; }
+    const courts = Math.floor(players / 4);
+    const totalPairs = players * (players - 1) / 2;
+    const matches = Math.ceil(totalPairs / 2);
+    const pairsPerRound = courts * 2;
+    const rounds = Math.ceil(totalPairs / pairsPerRound);
+    const matchesPerPlayer = players - 1;
+    const sitOuts = players - (courts * 4);
+    const estMinutes = rounds * 17; // ~17 min per round (play + changeover)
+    const hours = Math.floor(estMinutes / 60);
+    const mins = estMinutes % 60;
+    const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    info.style.display = '';
+    info.innerHTML = `<strong>${players} players · ${courts} court${courts>1?'s':''}</strong><br>` +
+        `📊 ${matches} matches · ${rounds} rounds · ${matchesPerPlayer} matches/player<br>` +
+        `⏱️ Estimated duration: ~${duration}` +
+        (sitOuts > 0 ? `<br>🪑 ${sitOuts} player${sitOuts>1?'s':''} sit out each round` : '');
 }
 
 async function createQuickTournament() {
